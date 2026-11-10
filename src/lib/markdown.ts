@@ -126,6 +126,7 @@ function codeBlock(pre: Element): Element | null {
 
 function enhanceImage(img: Element, isFirst: boolean) {
   const props = (img.properties ??= {});
+  if (!isSafeUrl(String(props.src ?? ''))) props.src = '';
   const src = String(props.src ?? '');
   props.loading = isFirst ? 'eager' : 'lazy';
   props.decoding = 'async';
@@ -147,8 +148,24 @@ function enhanceImage(img: Element, isFirst: boolean) {
   }
 }
 
+/**
+ * Only web, mail, phone and same-site addresses are kept. Anything else — `javascript:`,
+ * `data:`, `vbscript:` — is removed, so a pasted link can never run script.
+ */
+function isSafeUrl(url: string): boolean {
+  const value = url.trim();
+  if (value === '') return false;
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return true;
+  // Relative addresses have no scheme: no colon before the first slash, ? or #.
+  return !/^[^/?#]*:/.test(value);
+}
+
 function enhanceLink(a: Element) {
   const href = String(a.properties?.href ?? '');
+  if (!isSafeUrl(href)) {
+    if (a.properties) delete a.properties.href;
+    return;
+  }
   if (/^https?:\/\//i.test(href)) {
     a.properties = { ...a.properties, target: '_blank', rel: ['noopener', 'noreferrer'] };
   }
