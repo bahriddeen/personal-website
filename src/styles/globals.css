@@ -1,0 +1,394 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- base ---------- */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+html {
+  background-color: #fff;
+  transition: background-color 0.3s ease;
+}
+html.dark {
+  background-color: #18181b;
+}
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+::selection {
+  background-color: rgba(97, 130, 154, 0.3);
+  color: #18181b;
+}
+.dark ::selection {
+  background-color: rgba(135, 199, 224, 0.3);
+  color: #f4f4f5;
+}
+
+/* Visible keyboard focus everywhere (the reference relies on browser defaults). */
+:focus-visible {
+  outline: 2px solid #61829a;
+  outline-offset: 2px;
+}
+.dark :focus-visible {
+  outline-color: #87c7e0;
+}
+
+/* ---------- entrance animation start states ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+}
+.fade {
+  opacity: 0;
+}
+.scaleFade {
+  opacity: 0;
+  transform: scale(0.75);
+}
+@media (min-width: 640px) {
+  .sm\:scaleFade {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+}
+.xScrollbars {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.xScrollbars::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .fade,
+  .scaleFade,
+  .sm\:scaleFade {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
+}
+
+/* ---------- article typography (overrides @tailwindcss/typography) ---------- */
+.prose a {
+  color: #61829a;
+  text-decoration: none;
+  font-weight: 500;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  transition:
+    background-size 0.3s,
+    color 0.2s;
+}
+.prose a:hover,
+.prose a:focus {
+  color: #618e9a;
+  background-size: 100% 1px;
+}
+.prose a:visited {
+  color: #6247aa;
+}
+.prose a:visited:hover,
+.prose a:visited:focus {
+  color: #4a3786;
+  background-size: 100% 1px;
+}
+.dark .prose a {
+  color: #87c7e0;
+}
+.dark .prose a:hover,
+.dark .prose a:focus {
+  color: #9fdcf5;
+}
+.dark .prose a:visited {
+  color: #a78fec;
+}
+.dark .prose a:visited:hover,
+.dark .prose a:visited:focus {
+  color: #b9a8f0;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: #18181b;
+  font-weight: 600;
+  margin-bottom: 0.75em;
+  scroll-margin-top: 2rem;
+}
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #f4f4f5;
+}
+.prose h1 {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  margin-top: 1.5em;
+  font-weight: 700;
+}
+.prose h2 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  margin-top: 1.75em;
+}
+.prose h3 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  margin-top: 1.5em;
+}
+.prose h4 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  margin-top: 1.5em;
+}
+.prose h5 {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  margin-top: 1.5em;
+}
+.prose h6 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  margin-top: 1.5em;
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  line-height: 1.75;
+  margin-bottom: 1.5em;
+  color: #3f3f46;
+}
+.dark .prose p,
+.dark .prose ul,
+.dark .prose ol {
+  color: #d4d4d8;
+}
+.prose strong {
+  color: #18181b;
+}
+.dark .prose strong {
+  color: #ececec;
+}
+.prose img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 2em auto;
+  border-radius: 0.75rem;
+}
+.prose blockquote {
+  border-left: 4px solid #e4e4e7;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #52525b;
+  margin: 1.5em 0;
+}
+.prose blockquote p {
+  color: inherit;
+}
+.dark .prose blockquote {
+  border-left-color: #3f3f46;
+  color: #a1a1aa;
+}
+.prose code:not(pre code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: #f4f4f5;
+  color: #18181b;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+.prose code:not(pre code)::before,
+.prose code:not(pre code)::after {
+  content: none;
+}
+.dark .prose code:not(pre code) {
+  background-color: #27272a;
+  color: #e4e4e7;
+}
+.prose table {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+.prose thead th {
+  color: #18181b;
+}
+.dark .prose thead th {
+  color: #f4f4f5;
+}
+.dark .prose thead {
+  border-bottom-color: #52525b;
+}
+.dark .prose tbody tr {
+  border-bottom-color: #3f3f46;
+}
+.dark .prose td {
+  color: #a8a8a8;
+}
+.dark .prose hr {
+  border-color: #3f3f46;
+}
+.prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+/* ---------- code blocks (same in both themes) ---------- */
+.code-block {
+  position: relative;
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid #374151;
+  background-color: #282a36;
+}
+.prose .code-block pre {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0;
+  background: none;
+  color: #e4e4e7;
+  font-family: 'Fira Code', 'Fira Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  line-height: 21px;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+.prose .code-block pre code {
+  font: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+.code-block pre::selection,
+.code-block pre ::selection {
+  background-color: rgba(83, 194, 202, 0.3);
+  color: #f4f4f5;
+}
+.code-copy {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.375rem;
+  background-color: rgba(55, 65, 81, 0.8);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #d1d5db;
+  opacity: 0;
+  transition: all 0.15s;
+}
+.code-copy:hover {
+  background-color: #4b5563;
+}
+.code-block:hover .code-copy,
+.code-block:focus-within .code-copy,
+.code-copy:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .code-copy {
+    opacity: 1;
+  }
+}
+.code-lang {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.375rem;
+  font-size: 0.6875rem;
+  color: #6b7280;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Prism tokens (Tomorrow Night palette, as measured on the reference) */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #999999;
+}
+.token.punctuation {
+  color: #cccccc;
+}
+.token.tag,
+.token.attr-name,
+.token.namespace,
+.token.deleted {
+  color: #e2777a;
+}
+.token.function-name {
+  color: #6196cc;
+}
+.token.boolean,
+.token.number,
+.token.function {
+  color: #f08d49;
+}
+.token.property,
+.token.class-name,
+.token.constant,
+.token.symbol {
+  color: #f8c555;
+}
+.token.selector,
+.token.important,
+.token.atrule,
+.token.keyword,
+.token.builtin {
+  color: #cc99cd;
+}
+.token.string,
+.token.char,
+.token.attr-value,
+.token.regex,
+.token.variable {
+  color: #7ec699;
+}
+.token.operator,
+.token.entity,
+.token.url {
+  color: #67cdcc;
+}
+.token.inserted {
+  color: #7ec699;
+}
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
