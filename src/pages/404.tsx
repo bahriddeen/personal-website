@@ -1,6 +1,7 @@
 import { ArrowLeft } from '@phosphor-icons/react';
 import type { GetStaticProps } from 'next';
 import Link from 'next/link';
+import { DotPattern } from '@/components/extra/DotPattern';
 import { Layout, Section } from '@/components/layout/Layout';
 import { getSettings } from '@/lib/db/queries';
 import type { SiteSettings } from '@/lib/site';
@@ -25,7 +26,8 @@ export default function NotFoundPage({ site }: Props) {
       <Section className="my-10">
         <div className="flex flex-col items-center text-center">
           <div className="relative mb-6">
-            <h1 className="font-mono text-[120px] font-black leading-none sm:text-[180px]">
+            <DotPattern className="-inset-x-16 -inset-y-8 h-[calc(100%+4rem)] w-[calc(100%+8rem)] fill-zinc-400/60 [mask-image:radial-gradient(closest-side,black,transparent)] dark:fill-zinc-500/60" />
+            <h1 className="relative font-mono text-[120px] font-black leading-none sm:text-[180px]">
               <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                 404
               </span>
