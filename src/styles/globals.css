@@ -212,6 +212,10 @@ html.dark {
 .prose blockquote p {
   color: inherit;
 }
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after {
+  content: none;
+}
 .dark .prose blockquote {
   border-left-color: #3f3f46;
   color: #a1a1aa;
