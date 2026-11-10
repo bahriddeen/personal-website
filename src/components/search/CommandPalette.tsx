@@ -53,8 +53,18 @@ export function CommandPalette() {
         close();
       }
     };
+    // Lets a button (e.g. on the 404 page) open the palette, for visitors without a keyboard.
+    const onOpenRequest = () => {
+      restoreFocus.current = document.activeElement as HTMLElement | null;
+      setActive(0);
+      setOpen(true);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('open-search', onOpenRequest);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('open-search', onOpenRequest);
+    };
   }, [open, close]);
 
   useEffect(() => {

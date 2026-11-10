@@ -44,7 +44,9 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       },
       {
-        source: '/:path*',
+        // Everything except Next's own assets: the dev server serves one of its
+        // manifests with a JSON content type, which `nosniff` would block.
+        source: '/((?!_next/).*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

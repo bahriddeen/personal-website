@@ -97,11 +97,16 @@ const CARD_COPY: Partial<Record<SocialKind, string>> = {
 };
 
 /** Block under the blog index and each post: where to follow along. */
-export function SupportBlock({ links }: { links: SocialLink[] }) {
+export function SupportBlock({ links, className }: { links: SocialLink[]; className?: string }) {
   const cards = links.filter((l) => CARD_COPY[l.kind]).slice(0, 2);
   if (cards.length === 0) return null;
   return (
-    <div className="my-8 flex w-full flex-col border-t border-gray-200 py-6 dark:border-zinc-700">
+    <div
+      className={cn(
+        'my-8 flex flex-col border-t border-gray-200 px-0 py-6 dark:border-zinc-700 sm:px-10',
+        className,
+      )}
+    >
       <h2 className="mb-4 text-center text-xl font-medium text-gray-800 dark:text-gray-200">
         Want more like this?
       </h2>

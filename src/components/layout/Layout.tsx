@@ -28,7 +28,7 @@ export function Layout({ site, seo, children }: LayoutProps) {
       >
         Skip to content
       </a>
-      <div className="grid min-h-screen grid-rows-[auto_1fr_auto] transition-colors duration-300">
+      <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] transition-colors duration-300">
         <Header title={site.title} />
         <main id="content" className="flex w-full flex-col items-center px-6 sm:px-10">
           {children}
