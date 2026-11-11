@@ -56,12 +56,16 @@ export function Intro({ site }: { site: SiteSettings }) {
   );
 }
 
-/** Tilting card for the project named in Settings. */
+/**
+ * Tilting card for the project named in Settings.
+ * No entrance animation on purpose: its image is the largest thing on the first screen,
+ * and fading it in would delay the page's largest contentful paint.
+ */
 export function ProjectCard({ site }: { site: SiteSettings }) {
   const { name, tagline, url } = site.project;
   if (!name) return null;
   return (
-    <TiltCard className="fade mx-auto mt-12 w-full max-w-sm animate-fadeMd rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:bg-zinc-800 dark:ring-white/10">
+    <TiltCard className="mx-auto mt-12 w-full max-w-sm rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:bg-zinc-800 dark:ring-white/10">
       <div className="relative aspect-[3/2] w-full">
         <Image
           src="/placeholders/project-1200x800.jpg"
@@ -69,7 +73,8 @@ export function ProjectCard({ site }: { site: SiteSettings }) {
           fill
           sizes="(max-width: 640px) calc(100vw - 48px), 384px"
           className="object-cover"
-          priority
+          loading="eager"
+          fetchPriority="high"
         />
       </div>
       <div className="p-6">

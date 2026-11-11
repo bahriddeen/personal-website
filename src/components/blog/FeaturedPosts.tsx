@@ -123,10 +123,10 @@ export function FeaturedPosts({ posts }: { posts: PostSummary[] }) {
           <p className={cn(value, 'min-h-32 text-pretty')}>{current.description}</p>
           <Link
             href={`/blogs/${current.slug}`}
-            aria-label={`Read more: ${current.title}`}
+            aria-label={`Read this post: ${current.title}`}
             className="group flex w-max items-center justify-center gap-2.5 rounded-2xl bg-white px-4 py-2.5 text-sm font-[550] text-zinc-700 active:scale-95 dark:bg-zinc-800 dark:text-zinc-200 sm:transition-transform"
           >
-            Read more
+            Read this post
             <span className="relative flex size-4 items-center justify-center overflow-hidden *:transition-transform *:duration-[400ms] *:ease-bounce">
               <ArrowRight
                 weight="bold"

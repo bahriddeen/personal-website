@@ -161,12 +161,16 @@ export async function updatePost(id: number, input: PostInput): Promise<Post | n
   return toPost(row);
 }
 
-export async function deletePost(id: number): Promise<Post | null> {
+/** Deletes a post and any redirects pointing at it; returns the old slugs that redirected. */
+export async function deletePost(id: number): Promise<{ post: Post; redirectedFrom: string[] } | null> {
   const db = getDb();
   const [row] = await db.delete(posts).where(eq(posts.id, id)).returning();
   if (!row) return null;
-  await db.delete(redirects).where(eq(redirects.toSlug, row.slug));
-  return toPost(row);
+  const removed = await db
+    .delete(redirects)
+    .where(eq(redirects.toSlug, row.slug))
+    .returning({ fromSlug: redirects.fromSlug });
+  return { post: toPost(row), redirectedFrom: removed.map((r) => r.fromSlug) };
 }
 
 export async function getRedirect(fromSlug: string): Promise<string | null> {

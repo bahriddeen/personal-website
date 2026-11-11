@@ -1,7 +1,7 @@
 import type { GetStaticProps } from 'next';
 import { useCallback, useState } from 'react';
 import { Layout, Section } from '@/components/layout/Layout';
-import { TalkCard, TalkPlayer, TYPE_PLURAL } from '@/components/talks/Talks';
+import { TalkCard, TalkPlayer, TYPE_LABEL, TYPE_PLURAL } from '@/components/talks/Talks';
 import { FollowBlock } from '@/components/ui/Social';
 import { cn } from '@/lib/cn';
 import { getSettings, listTalks, type Talk, type TalkType } from '@/lib/db/queries';
@@ -33,7 +33,7 @@ export default function TalksPage({ site, talks }: Props) {
 
   const summary = [
     `${talks.length} ${talks.length === 1 ? 'item' : 'items'}`,
-    ...counts.map((c) => `${c.count} ${TYPE_PLURAL[c.type].toLowerCase()}`),
+    ...counts.map((c) => `${c.count} ${(c.count === 1 ? TYPE_LABEL : TYPE_PLURAL)[c.type].toLowerCase()}`),
   ].join(' • ');
 
   return (
@@ -100,7 +100,7 @@ export default function TalksPage({ site, talks }: Props) {
             )}
             <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {visible.map((talk, i) => (
-                <TalkCard key={talk.id} talk={talk} onPlay={setPlaying} priority={i < 3} />
+                <TalkCard key={talk.id} talk={talk} onPlay={setPlaying} priority={i === 0} />
               ))}
             </div>
           </>

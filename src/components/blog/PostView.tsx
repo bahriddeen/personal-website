@@ -130,6 +130,8 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
   return (
     <>
       <ReadingProgress />
+      {/* Faint cover backdrop. Small (640px) but drawn large, so it is usually the page's
+          largest paint: it loads first and without a fade to keep that paint early. */}
       {post.coverUrl && (
         <div
           aria-hidden="true"
@@ -139,7 +141,8 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
             src={post.coverUrl}
             alt=""
             sizes="640px"
-            className="fade animate-fadeLg object-cover"
+            priority
+            className="object-cover"
           />
         </div>
       )}

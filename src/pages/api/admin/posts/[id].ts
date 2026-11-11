@@ -26,9 +26,15 @@ export default withAdmin({
   DELETE: async (req, res) => {
     const id = routeId(req, res);
     if (id === null) return;
-    const post = await deletePost(id);
-    if (!post) return res.status(404).json({ error: 'This post no longer exists.' });
-    await revalidate(res, ['/', '/blogs', `/blogs/${post.slug}`]);
+    const deleted = await deletePost(id);
+    if (!deleted) return res.status(404).json({ error: 'This post no longer exists.' });
+    // Earlier addresses of this post are cached as redirects; refresh them as well.
+    await revalidate(res, [
+      '/',
+      '/blogs',
+      `/blogs/${deleted.post.slug}`,
+      ...deleted.redirectedFrom.map((slug) => `/blogs/${slug}`),
+    ]);
     return res.status(200).json({ ok: true });
   },
 });

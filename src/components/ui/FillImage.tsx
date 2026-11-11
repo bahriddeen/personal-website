@@ -17,6 +17,7 @@ type FillImageProps = {
   alt: string;
   /** Rendered width hint for responsive loading, e.g. "(max-width: 640px) 100vw, 320px". */
   sizes: string;
+  /** Likely the largest image above the fold: load it first instead of lazily. */
   priority?: boolean;
   className?: string;
   onError?: (e: SyntheticEvent<HTMLImageElement>) => void;
@@ -35,7 +36,8 @@ export function FillImage({ src, alt, sizes, priority, className, onError }: Fil
         alt={alt}
         fill
         sizes={sizes}
-        priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : undefined}
         className={className}
         onError={onError}
       />
@@ -46,6 +48,7 @@ export function FillImage({ src, alt, sizes, priority, className, onError }: Fil
       src={src}
       alt={alt}
       loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
       decoding="async"
       className={cn('absolute inset-0 h-full w-full', className)}
       onError={onError}

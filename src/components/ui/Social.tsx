@@ -98,7 +98,12 @@ const CARD_COPY: Partial<Record<SocialKind, string>> = {
 
 /** Block under the blog index and each post: where to follow along. */
 export function SupportBlock({ links, className }: { links: SocialLink[]; className?: string }) {
-  const cards = links.filter((l) => CARD_COPY[l.kind]).slice(0, 2);
+  // Up to two cards, preferring the channels where updates actually appear.
+  const order: SocialKind[] = ['telegram', 'github', 'linkedin'];
+  const cards = links
+    .filter((l) => CARD_COPY[l.kind])
+    .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+    .slice(0, 2);
   if (cards.length === 0) return null;
   return (
     <div

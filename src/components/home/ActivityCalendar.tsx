@@ -271,7 +271,13 @@ export function ActivityCalendar({ months }: { months: ActivityMonth[] }) {
       {months.map((month, i) => (
         <Fragment key={`${month.year}-${month.month}`}>
           {(i === 0 || months[i - 1].year !== month.year) && <YearPill year={month.year} />}
-          <div className="w-full">
+          {/* Months below the first are skipped by the browser until scrolled near. */}
+          <div
+            className={cn(
+              'w-full',
+              i > 0 && '[contain-intrinsic-size:auto_420px] [content-visibility:auto]',
+            )}
+          >
             <MonthCard data={month} />
           </div>
         </Fragment>

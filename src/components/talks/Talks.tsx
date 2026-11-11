@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import type { Talk, TalkType } from '@/lib/db/queries';
 import { formatDate, youtubeId } from '@/lib/format';
 
-const TYPE_LABEL: Record<TalkType, string> = { talk: 'Talk', podcast: 'Podcast', video: 'Video' };
+export const TYPE_LABEL: Record<TalkType, string> = { talk: 'Talk', podcast: 'Podcast', video: 'Video' };
 export const TYPE_PLURAL: Record<TalkType, string> = {
   talk: 'Talks',
   podcast: 'Podcasts',
