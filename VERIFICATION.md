@@ -22,11 +22,10 @@ Evidence is in `analysis/verify/` (git-ignored, local only):
 | Unit tests | 46 of 46 pass |
 | README | [README.md](README.md) |
 
-**Not re-checked on screen:** the last change — a readable base colour for display math in the
-dark theme (`src/styles/globals.css`) — was made after the final build. Docker Desktop was
-paused at that point, so the site could not be rebuilt. It is a two-rule CSS change; the
-screenshots in `analysis/verify/` still show the faint math. Rebuild and look at
-`/blogs/placeholder-notes-on-estimating` in dark mode to confirm.
+After the first write-up, the site was rebuilt with the last fix in place (a readable colour
+for display math in the dark theme) and re-checked on 2026-11-11: the math is clearly legible,
+and the keyboard, theme and production publishing checks were repeated on that final build with
+the same results.
 
 ## Lighthouse
 
@@ -70,10 +69,7 @@ Other pages, mobile, for context: Blog index 100 / 100 / 100 / 100 (after fixing
 
 ## Keyboard and themes
 
-Run with a script that drives a real Chrome using only key presses. These checks ran on the
-build before the last performance changes (bio animation by word, off-screen calendar months
-deferred, one link label, image priority) and were not repeated afterwards, because the local
-database was no longer reachable.
+Run with a script that drives a real Chrome using only key presses, on the final build.
 
 - Every page (home, about, blog index, post, talks, 404) in light and dark: every tab stop is
   visible and shows a focus ring, and focus never gets stuck. 11–26 stops per page.
@@ -170,7 +166,7 @@ Everything below is intentional. "Kept" means the difference stays and why.
 | No quiz block | Out of scope |
 | The faint cover backdrop does not fade in | It is the page's largest paint; loading it early keeps that fast |
 | Block quotes have no decorative quotation marks | Cleaner with the italic style |
-| Display math in the dark theme was faint | Fixed after the final build — see the note at the top |
+| Display math uses the article text colour in the dark theme | It was nearly invisible; fixed and confirmed on screen |
 
 ### Talks
 
