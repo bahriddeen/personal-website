@@ -169,6 +169,7 @@ tests/                unit tests
 
 - GitHub sign-in has not been tested end to end (it needs your OAuth app). Test the first
   login after deploying.
-- Lighthouse performance for the home page on mobile is 97 against the reference's 99; see
-  VERIFICATION.md for the cause and the two ways to close it.
+- Lighthouse performance for the home page on mobile is 97 against the reference's 99.
+  This was accepted to keep the project card at the top of the page; VERIFICATION.md has the
+  cause and the two ways to close it later.
 - No analytics. Vercel Web Analytics can be added later if you want it.

@@ -60,8 +60,8 @@ To check that this is the model and not the page, both sites were also measured 
 What was done about it: the image is small (3.6 KB at phone size), loads with high priority,
 has no entrance fade, and off-screen calendar months are skipped until scrolled to. What would
 close the last two points under the simulated method: remove the image from the project card,
-or move the card below the first calendar on phones. I left that choice to you because it
-changes the home page you approved. The score on Vercel (HTTP/2, real latency) may also differ
+or move the card below the first calendar on phones. Decision (2026-11-11): keep the card where it
+is and accept the gap. The score on Vercel (HTTP/2, real latency) may also differ
 from localhost; re-run after the first deploy.
 
 Other pages, mobile, for context: Blog index 100 / 100 / 100 / 100 (after fixing a generic
