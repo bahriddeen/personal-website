@@ -152,10 +152,8 @@ tests/                unit tests
 - **`robots.txt`** allows search and AI answers but asks not to be used for model training
   (`Content-Signal`). Change it in `robotsTxt()` in `src/lib/feeds.ts` if you prefer otherwise.
 - **Search**: press ⌘K / Ctrl+K anywhere.
-- **Buy Me a Coffee button**: bottom-left on every public page, never in the admin. Its settings
-  (page name, colour, position) are at the top of `src/components/layout/BuyMeCoffee.tsx`. It loads
-  a script from buymeacoffee.com once the page has finished loading. The position must stay
-  lowercase (`left` / `right`) or the vendor script ignores it.
+- **Buy Me a Coffee**: a card in the "Want more like this?" block and a tile under "Follow me on". The address is
+  a social link in Admin → Settings.
 - **Extra components** in `src/components/extra/` are adapted from spell.sh (Marquee, Tilt
   Card, Blur Reveal) and from Magic UI's Dot Pattern as listed on 21st.dev (MIT). spell.sh
   does not state a licence on its site; the versions here are rewritten for this project and

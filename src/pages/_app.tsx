@@ -1,7 +1,5 @@
 import type { AppProps } from 'next/app';
 import { Figtree } from 'next/font/google';
-import { useRouter } from 'next/router';
-import { BuyMeCoffee } from '@/components/layout/BuyMeCoffee';
 import '@/styles/globals.css';
 
 const figtree = Figtree({
@@ -11,7 +9,6 @@ const figtree = Figtree({
 });
 
 export default function App({ Component, pageProps }: AppProps) {
-  const router = useRouter();
   return (
     <>
       {/* Define the font variable on :root so dialogs and anything else rendered
@@ -22,8 +19,6 @@ export default function App({ Component, pageProps }: AppProps) {
         }
       `}</style>
       <Component {...pageProps} />
-      {/* Public pages only: never on the admin or its login. */}
-      {!router.pathname.startsWith('/admin') && <BuyMeCoffee />}
     </>
   );
 }
