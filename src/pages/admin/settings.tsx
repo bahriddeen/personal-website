@@ -17,6 +17,7 @@ const KINDS: Array<{ value: SocialKind; label: string }> = [
   { value: 'telegram', label: 'Telegram' },
   { value: 'x', label: 'X' },
   { value: 'youtube', label: 'YouTube' },
+  { value: 'coffee', label: 'Buy Me a Coffee' },
   { value: 'email', label: 'Email' },
   { value: 'website', label: 'Website' },
 ];

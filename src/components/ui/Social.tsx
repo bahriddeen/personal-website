@@ -1,4 +1,5 @@
 import {
+  Coffee,
   EnvelopeSimple,
   GithubLogo,
   Globe,
@@ -17,6 +18,7 @@ export const SOCIAL_ICONS: Record<SocialKind, Icon> = {
   telegram: TelegramLogo,
   x: XLogo,
   youtube: YoutubeLogo,
+  coffee: Coffee,
   email: EnvelopeSimple,
   website: Globe,
 };
@@ -32,6 +34,8 @@ const TILE_STYLES: Record<SocialKind, string> = {
   x: 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]',
   youtube:
     'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-[0_0_15px_rgba(255,0,0,0.5)]',
+  coffee:
+    'border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:shadow-[0_0_15px_rgba(255,221,0,0.5)]',
   email:
     'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-[0_0_15px_rgba(16,185,129,0.45)]',
   website:
@@ -82,6 +86,8 @@ export function FollowBlock({ links, className }: { links: SocialLink[]; classNa
 }
 
 const CARD_STYLES: Partial<Record<SocialKind, string>> = {
+  coffee:
+    'border-yellow-200 bg-yellow-50 hover:bg-yellow-100 hover:shadow-[0_0_15px_rgba(255,221,0,0.5)] text-yellow-700',
   telegram:
     'border-blue-200 bg-blue-50 hover:bg-blue-100 hover:shadow-[0_0_15px_rgba(29,147,210,0.5)] text-[#1686B0]',
   github:
@@ -91,6 +97,7 @@ const CARD_STYLES: Partial<Record<SocialKind, string>> = {
 };
 
 const CARD_COPY: Partial<Record<SocialKind, string>> = {
+  coffee: 'Buy me a coffee, if you found this helpful!',
   telegram: 'Shorter notes and updates, as they happen.',
   github: 'The code behind what I write about.',
   linkedin: 'Work history and the occasional post.',
@@ -99,7 +106,7 @@ const CARD_COPY: Partial<Record<SocialKind, string>> = {
 /** Block under the blog index and each post: where to follow along. */
 export function SupportBlock({ links, className }: { links: SocialLink[]; className?: string }) {
   // Up to two cards, preferring the channels where updates actually appear.
-  const order: SocialKind[] = ['telegram', 'github', 'linkedin'];
+  const order: SocialKind[] = ['coffee', 'telegram', 'github', 'linkedin'];
   const cards = links
     .filter((l) => CARD_COPY[l.kind])
     .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))

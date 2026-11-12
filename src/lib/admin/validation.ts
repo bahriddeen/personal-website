@@ -59,7 +59,7 @@ export const previewSchema = z.object({ markdown: z.string().max(300_000) });
 
 const socialLink = z
   .object({
-    kind: z.enum(['github', 'linkedin', 'telegram', 'x', 'youtube', 'email', 'website']),
+    kind: z.enum(['github', 'linkedin', 'telegram', 'x', 'youtube', 'coffee', 'email', 'website']),
     label: z.string().trim().min(1, 'is required').max(40),
     url: z.string().trim().max(500),
   })

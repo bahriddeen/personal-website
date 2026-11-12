@@ -1,6 +1,6 @@
 /** Site-wide settings. Stored as one JSON row in the database and editable in Admin → Settings. */
 
-export type SocialKind = 'github' | 'linkedin' | 'telegram' | 'x' | 'youtube' | 'email' | 'website';
+export type SocialKind = 'github' | 'linkedin' | 'telegram' | 'x' | 'youtube' | 'coffee' | 'email' | 'website';
 
 export type SocialLink = {
   kind: SocialKind;
@@ -49,6 +49,7 @@ export const defaultSettings: SiteSettings = {
     { kind: 'github', label: 'GitHub', url: 'https://github.com/bahriddeen' },
     { kind: 'linkedin', label: 'LinkedIn', url: 'https://www.linkedin.com/in/bahriddin/' },
     { kind: 'telegram', label: 'Telegram', url: 'https://t.me/md_bahriddin' },
+    { kind: 'coffee', label: 'Buy Me a Coffee', url: 'https://www.buymeacoffee.com/mbahriddin' },
   ],
   project: {
     name: 'Sakina',
