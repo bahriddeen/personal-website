@@ -9,7 +9,7 @@ export default withAdmin({
     await saveSettings({ ...data, twitterHandle: data.twitterHandle.replace(/^@/, '') });
     // Settings appear in the shell of every page, so everything is regenerated.
     const posts = await listPublicPosts();
-    await revalidate(res, ['/', '/about', '/blogs', '/talks', ...posts.map((p) => `/blogs/${p.slug}`)]);
+    await revalidate(res, ['/', '/about', '/blogs', '/talks', '/book', '/newsletter', ...posts.map((p) => `/blogs/${p.slug}`)]);
     return res.status(200).json({ ok: true });
   },
 });

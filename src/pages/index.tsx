@@ -1,26 +1,22 @@
 import type { GetStaticProps } from 'next';
-import { ActivityCalendar } from '@/components/home/ActivityCalendar';
 import { Intro, ProjectCard } from '@/components/home/Intro';
 import { Layout } from '@/components/layout/Layout';
-import { buildActivityMonths, type ActivityMonth } from '@/lib/activities';
-import { getSettings, listPublicPosts, listTalks } from '@/lib/db/queries';
+import { getSettings } from '@/lib/db/queries';
 import { SITE_URL, absoluteUrl, type SiteSettings } from '@/lib/site';
 
 type Props = {
   site: SiteSettings;
-  months: ActivityMonth[];
 };
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-  const [site, posts, talks] = await Promise.all([getSettings(), listPublicPosts(), listTalks()]);
+  const site = await getSettings();
   return {
-    props: { site, months: buildActivityMonths(posts, talks, new Date()) },
-    // Also what makes scheduled posts appear on time without a cron job.
+    props: { site },
     revalidate: 300,
   };
 };
 
-export default function HomePage({ site, months }: Props) {
+export default function HomePage({ site }: Props) {
   return (
     <Layout
       site={site}
@@ -40,7 +36,6 @@ export default function HomePage({ site, months }: Props) {
     >
       <Intro site={site} />
       <ProjectCard site={site} />
-      <ActivityCalendar months={months} />
     </Layout>
   );
 }

@@ -30,6 +30,11 @@ export type SiteSettings = {
   };
   /** Words for the scrolling strip on the home page. */
   marquee: string[];
+  /**
+   * Google Calendar appointment schedule shown on /book. Empty hides the booking widget.
+   * The embeddable form is https://calendar.google.com/calendar/appointments/schedules/…
+   */
+  bookingUrl: string;
 };
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(
@@ -57,6 +62,7 @@ export const defaultSettings: SiteSettings = {
     url: '',
   },
   marquee: ['PLACEHOLDER', 'TypeScript', 'React', 'Next.js', 'Node.js', 'PostgreSQL', 'Swift'],
+  bookingUrl: '',
 };
 
 /** Fill in anything missing from stored settings so pages never see undefined fields. */
@@ -69,6 +75,49 @@ export function withDefaults(stored: Partial<SiteSettings> | null | undefined): 
     project: { ...defaultSettings.project, ...(s.project ?? {}) },
     marquee: Array.isArray(s.marquee) ? s.marquee : defaultSettings.marquee,
   };
+}
+
+/** Google booking pages this site will link to or embed. */
+const BOOKING_HOSTS = ['calendar.google.com', 'calendar.app.google'];
+
+export function isBookingUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'https:' && BOOKING_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The iframe source for a booking URL, or null when it cannot be embedded. Google serves the
+ * schedule at /calendar/appointments/schedules/<id> (and redirects /appointments/… there);
+ * with ?gv=true it allows framing. A calendar.app.google short link has to be resolved
+ * first (see resolveBookingUrl).
+ */
+export function bookingEmbedUrl(value: string): string | null {
+  if (!isBookingUrl(value)) return null;
+  const u = new URL(value);
+  const match = u.pathname.match(/^(?:\/calendar)?\/appointments\/schedules\/([\w-]+)\/?$/);
+  if (u.hostname !== 'calendar.google.com' || !match) return null;
+  return `https://calendar.google.com/calendar/appointments/schedules/${match[1]}?gv=true`;
+}
+
+/**
+ * Follows a calendar.app.google short link to the schedule it points at. Runs at build /
+ * revalidate time only. Returns the input unchanged if it is not a short link or the lookup
+ * fails, so the page falls back to a plain button.
+ */
+export async function resolveBookingUrl(value: string): Promise<string> {
+  if (!isBookingUrl(value) || new URL(value).hostname !== 'calendar.app.google') return value;
+  try {
+    const res = await fetch(value, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    const location = res.headers.get('location');
+    if (location && isBookingUrl(location)) return location;
+  } catch (err) {
+    console.warn('[book] could not resolve booking short link', (err as Error).message);
+  }
+  return value;
 }
 
 export function absoluteUrl(path: string): string {

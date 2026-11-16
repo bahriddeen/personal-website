@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { POST_STATUSES, TALK_TYPES } from '@/lib/db/schema';
 import { isValidSlug } from '@/lib/format';
+import { isBookingUrl } from '@/lib/site';
 
 /** Web address: absolute http(s) only, so a `javascript:` URL can never be stored. */
 const httpUrl = z
@@ -86,4 +87,12 @@ export const settingsSchema = z.object({
     url: z.union([httpUrl, z.literal('')]),
   }),
   marquee: z.array(z.string().trim().min(1).max(40)).max(20),
+  bookingUrl: z.union([
+    z
+      .string()
+      .trim()
+      .max(2000)
+      .refine(isBookingUrl, 'must be a Google Calendar booking link (calendar.google.com or calendar.app.google)'),
+    z.literal(''),
+  ]),
 });

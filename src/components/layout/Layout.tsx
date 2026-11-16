@@ -34,7 +34,7 @@ export function Layout({ site, seo, children }: LayoutProps) {
           {children}
         </main>
         <footer className="flex w-full items-center justify-center px-6 pb-12 pt-40 text-zinc-500 sm:px-10">
-          <div className="fade flex w-full max-w-lg animate-fade items-center justify-center">
+          <div className="fade flex w-full max-w-[640px] animate-fade items-center justify-center">
             <p className="dark:text-white">
               © {new Date().getFullYear()} {site.title}
             </p>
@@ -48,12 +48,12 @@ export function Layout({ site, seo, children }: LayoutProps) {
   );
 }
 
-/** Centred 512px content column with the reference's vertical rhythm. */
+/** Centred 640px content column with the reference's vertical rhythm. */
 export function Section({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <section
       className={cn(
-        'my-20 flex w-full max-w-lg flex-col items-center text-zinc-800 sm:my-32',
+        'my-20 flex w-full max-w-[640px] flex-col items-center text-zinc-800 sm:my-32',
         className,
       )}
     >

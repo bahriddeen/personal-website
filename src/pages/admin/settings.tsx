@@ -147,6 +147,16 @@ export default function AdminSettingsPage({ settings }: Props) {
           </div>
         </section>
 
+        <section className={card} aria-labelledby="settings-booking">
+          <h2 id="settings-booking" className="mb-1 text-lg font-semibold">1:1 calls</h2>
+          <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+            Shown on the Book a call page. In Google Calendar, create an appointment schedule, open its booking page, and paste that link here. Leave empty to show a &ldquo;not open yet&rdquo; note instead.
+          </p>
+          <Field label="Google booking page link" htmlFor="s-booking" hint="The calendar.app.google share link or the full calendar.google.com/calendar/appointments/schedules/… link. Either one embeds on the page.">
+            <input id="s-booking" type="url" className={inputClass} placeholder="https://calendar.app.google/…" value={form.bookingUrl} onChange={(e) => set('bookingUrl', e.target.value)} />
+          </Field>
+        </section>
+
         <section className={card} aria-labelledby="settings-seo">
           <h2 id="settings-seo" className="mb-4 text-lg font-semibold">Search and sharing defaults</h2>
           <div className="grid gap-4">

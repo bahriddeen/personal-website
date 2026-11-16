@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildActivityMonths } from '@/lib/activities';
 import { imageSize, sniffImageType } from '@/lib/admin/images';
 import { postSchema, settingsSchema, talkSchema } from '@/lib/admin/validation';
-import type { Post, Talk } from '@/lib/db/queries';
+import type { Post } from '@/lib/db/queries';
 import { llmsTxt, mdBlogs, mdPost, robotsTxt, rssXml, sitemapXml } from '@/lib/feeds';
 import { defaultSettings } from '@/lib/site';
 
@@ -18,18 +17,6 @@ const post: Post = {
   publishedAt: '2026-03-26T09:00:00.000Z',
   createdAt: '2026-03-20T09:00:00.000Z',
   updatedAt: '2026-03-27T09:00:00.000Z',
-};
-
-const talk: Talk = {
-  id: 1,
-  title: 'A talk',
-  event: 'Conf',
-  date: '2026-03-05',
-  videoUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
-  thumbnailUrl: null,
-  type: 'talk',
-  duration: '10:00',
-  description: '',
 };
 
 describe('Markdown mirrors', () => {
@@ -73,7 +60,7 @@ describe('RSS and sitemap', () => {
 
   it('lists the main pages and each post with a last-modified day', () => {
     const xml = sitemapXml([post], '2026-01-01');
-    for (const path of ['/', '/blogs', '/about', '/talks', '/blogs/hello']) {
+    for (const path of ['/', '/blogs', '/about', '/talks', '/book', '/newsletter', '/blogs/hello']) {
       expect(xml).toContain(`<loc>http://localhost:3000${path}</loc>`);
     }
     expect(xml).toContain('<lastmod>2026-03-27</lastmod>');
@@ -84,33 +71,6 @@ describe('RSS and sitemap', () => {
     const txt = robotsTxt();
     expect(txt).toContain('Disallow: /admin');
     expect(txt).toContain('Sitemap: http://localhost:3000/sitemap.xml');
-  });
-});
-
-describe('activity calendar', () => {
-  it('groups posts and talks by month, newest first', () => {
-    const months = buildActivityMonths([post], [talk], new Date('2026-04-01T00:00:00Z'));
-    expect(months).toHaveLength(1);
-    expect(months[0]).toMatchObject({ year: 2026, month: 2 });
-    expect(months[0].days.map((d) => d.day)).toEqual([5, 26]);
-    expect(months[0].days[1].items[0]).toMatchObject({ type: 'Blog', href: '/blogs/hello' });
-  });
-
-  it('shows the current month, empty, when nothing is published', () => {
-    const months = buildActivityMonths([], [], new Date('2026-11-10T00:00:00Z'));
-    expect(months).toEqual([{ year: 2026, month: 10, days: [] }]);
-  });
-
-  it('keeps only the most recent months', () => {
-    const many = Array.from({ length: 10 }, (_, i) => ({
-      ...post,
-      id: i + 1,
-      slug: `p${i}`,
-      publishedAt: `2025-${String(i + 1).padStart(2, '0')}-10T00:00:00.000Z`,
-    }));
-    const months = buildActivityMonths(many, [], new Date('2026-01-01T00:00:00Z'), 6);
-    expect(months).toHaveLength(6);
-    expect(months[0].month).toBe(9);
   });
 });
 

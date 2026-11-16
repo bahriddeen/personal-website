@@ -46,14 +46,6 @@ const config: Config = {
           from: { opacity: '0', transform: 'scale(.75)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
-        rotateIn: {
-          from: { opacity: '0', transform: 'translateY(40px) rotate(6deg)' },
-          to: { opacity: '1', transform: 'translateY(0) rotate(0deg)' },
-        },
-        rotateInAlt: {
-          from: { opacity: '0', transform: 'translateY(40px) rotate(-6deg)' },
-          to: { opacity: '1', transform: 'translateY(0) rotate(0deg)' },
-        },
         modalReveal: {
           from: { opacity: '0', transform: 'scale(.7) translateY(100px)' },
           to: { opacity: '1', transform: 'scale(1) translateY(0)' },
@@ -70,10 +62,7 @@ const config: Config = {
         fadeMd: 'fade 1.2s forwards',
         fadeLg: 'fade 1.6s forwards',
         revealSm: 'reveal .8s cubic-bezier(.5,-.2,.1,1.2) forwards',
-        scaleFade: 'scaleFade .4s cubic-bezier(.7,0,.5,2) forwards',
         scaleFadeBlog: 'scaleFade .8s cubic-bezier(.2,0,0,1.2) forwards',
-        rotate: 'rotateIn 1s cubic-bezier(.5,-.5,.1,1.8) forwards',
-        rotateAlt: 'rotateInAlt 1s cubic-bezier(.5,1,.1,1.8) forwards',
         modalReveal: 'modalReveal .6s cubic-bezier(0,1,0,1.1) forwards',
         marquee: 'marquee var(--marquee-duration, 30s) linear infinite',
         blurReveal: 'blurReveal .7s cubic-bezier(.2,.6,.2,1) forwards',

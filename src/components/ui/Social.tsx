@@ -9,6 +9,15 @@ import {
   YoutubeLogo,
   type Icon,
 } from '@phosphor-icons/react';
+import type { ComponentType } from 'react';
+import {
+  CoffeeColor,
+  GithubColor,
+  LinkedinColor,
+  TelegramColor,
+  YoutubeColor,
+} from '@/components/ui/BrandIcons';
+import { SubscribeForm } from '@/components/ui/SubscribeForm';
 import { cn } from '@/lib/cn';
 import type { SocialKind, SocialLink } from '@/lib/site';
 
@@ -23,7 +32,23 @@ export const SOCIAL_ICONS: Record<SocialKind, Icon> = {
   website: Globe,
 };
 
-/** Tint, border and hover glow per network. */
+/** Full-colour marks for the networks that have one; the rest fall back to Phosphor. */
+const BRAND_ICONS: Partial<Record<SocialKind, ComponentType<{ className?: string }>>> = {
+  telegram: TelegramColor,
+  youtube: YoutubeColor,
+  github: GithubColor,
+  linkedin: LinkedinColor,
+  coffee: CoffeeColor,
+};
+
+function TileIcon({ kind, size }: { kind: SocialKind; size: number }) {
+  const Brand = BRAND_ICONS[kind];
+  if (Brand) return <Brand className={size === 24 ? 'size-6' : 'size-7'} />;
+  const IconComponent = SOCIAL_ICONS[kind] ?? Globe;
+  return <IconComponent size={size} weight="fill" aria-hidden="true" />;
+}
+
+/** Tint, border and hover glow per network; the tooltip text takes the same colour. */
 const TILE_STYLES: Record<SocialKind, string> = {
   telegram:
     'border-blue-200 bg-blue-50 text-[#1686B0] hover:bg-blue-100 hover:shadow-[0_0_15px_rgba(29,147,210,0.5)]',
@@ -43,7 +68,6 @@ const TILE_STYLES: Record<SocialKind, string> = {
 };
 
 function SocialTile({ link }: { link: SocialLink }) {
-  const IconComponent = SOCIAL_ICONS[link.kind] ?? Globe;
   return (
     <a
       href={link.url}
@@ -56,11 +80,11 @@ function SocialTile({ link }: { link: SocialLink }) {
       )}
     >
       <span className="transition-transform duration-200 ease-out group-hover:scale-110">
-        <IconComponent size={24} weight="fill" aria-hidden="true" />
+        <TileIcon kind={link.kind} size={24} />
       </span>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-full z-10 mt-3 -translate-x-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 font-medium text-zinc-800 opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
+        className="pointer-events-none absolute left-1/2 top-full z-10 mt-3 -translate-x-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 font-medium opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
       >
         {link.label}
       </span>
@@ -103,7 +127,7 @@ const CARD_COPY: Partial<Record<SocialKind, string>> = {
   linkedin: 'Work history and the occasional post.',
 };
 
-/** Block under the blog index and each post: where to follow along. */
+/** Block under the blog index and each post: newsletter signup, then where to follow along. */
 export function SupportBlock({ links, className }: { links: SocialLink[]; className?: string }) {
   // Up to two cards, preferring the channels where updates actually appear.
   const order: SocialKind[] = ['coffee', 'telegram', 'github', 'linkedin'];
@@ -111,7 +135,6 @@ export function SupportBlock({ links, className }: { links: SocialLink[]; classN
     .filter((l) => CARD_COPY[l.kind])
     .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
     .slice(0, 2);
-  if (cards.length === 0) return null;
   return (
     <div
       className={cn(
@@ -122,12 +145,12 @@ export function SupportBlock({ links, className }: { links: SocialLink[]; classN
       <h2 className="mb-4 text-center text-xl font-medium text-gray-800 dark:text-gray-200">
         Want more like this?
       </h2>
-      <p className="mb-6 text-center text-gray-600 dark:text-gray-300">
-        New posts and smaller updates land here first.
+      <p className="mb-5 text-center text-gray-600 dark:text-gray-300">
+        Get new posts by email. No spam, unsubscribe any time.
       </p>
-      <div className="flex flex-col items-center justify-center gap-6 md:flex-row">
+      <SubscribeForm className="mx-auto mb-8 max-w-md" />
+      <div className={cn('flex flex-col items-center justify-center gap-6 md:flex-row', cards.length === 0 && 'hidden')}>
         {cards.map((link) => {
-          const IconComponent = SOCIAL_ICONS[link.kind];
           return (
             <a
               key={link.url}
@@ -140,7 +163,7 @@ export function SupportBlock({ links, className }: { links: SocialLink[]; classN
               )}
             >
               <span className="mr-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 border-white bg-white shadow-lg transition-all duration-300 ease-out group-hover:scale-110 dark:border-gray-600 dark:bg-gray-900">
-                <IconComponent size={26} weight="fill" aria-hidden="true" />
+                <TileIcon kind={link.kind} size={28} />
               </span>
               <span className="flex flex-col transition-transform duration-300 group-hover:translate-x-1">
                 <span className="text-lg font-medium text-gray-800 dark:text-gray-200">

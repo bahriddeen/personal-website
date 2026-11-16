@@ -8,6 +8,8 @@ const navLink =
 const MORE_LINKS = [
   { href: '/about', label: 'About Me' },
   { href: '/talks', label: 'Talks' },
+  { href: '/newsletter', label: 'Newsletter' },
+  { href: '/book', label: 'Book a Call' },
 ];
 
 function MoreMenu() {
@@ -110,7 +112,7 @@ function MoreMenu() {
 export function Header({ title }: { title: string }) {
   return (
     <header className="relative z-10 mt-6 flex w-full items-center justify-center px-6 text-zinc-700 sm:mt-16">
-      <div className="flex w-full max-w-lg items-center justify-between">
+      <div className="flex w-full max-w-[640px] items-center justify-between">
         <Link className="rounded-lg text-xl font-semibold dark:text-white" href="/">
           {title}
         </Link>

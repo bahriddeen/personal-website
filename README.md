@@ -82,6 +82,8 @@ in `DATABASE_URL`; skip `npm run db:up`.
    | `NEXTAUTH_SECRET` | output of `openssl rand -base64 32` |
    | `GITHUB_ID`, `GITHUB_SECRET` | from the OAuth app |
    | `ADMIN_GITHUB_ID` | your numeric GitHub id — the only account allowed into `/admin` |
+   | `RESEND_API_KEY` | from [resend.com](https://resend.com), after verifying your sending domain |
+   | `NEWSLETTER_FROM` | sender on that domain, e.g. `Bahriddin <newsletter@example.com>` |
 
    Do not set `DEV_ADMIN_LOGIN` in production. It is ignored there anyway.
 7. **Deploy.** The first build creates the tables. The site starts empty; either write your
@@ -110,8 +112,15 @@ Everything is done at `/admin` after signing in with GitHub.
 - **Talks** — title, event, date, video link, type and optional thumbnail. YouTube links play
   on the page and get their thumbnail automatically; other links open in a new tab.
 - **About** — the About page in Markdown.
+- **Newsletter** — subscriber counts, latest signups, and a *Send to subscribers* button for
+  each published post (each post can be sent once). People sign up from the form under every
+  post, on `/blogs` and on `/newsletter`; they confirm by email first (double opt-in), and every
+  email has a one-click unsubscribe link. Locally, without `RESEND_API_KEY`, emails are printed
+  to the dev server log instead of being sent.
 - **Settings** — site title, bio line, the scrolling strip on the home page, social links,
-  the project card, and the default description and share image.
+  the project card, the default description and share image, and the Google booking link for
+  `/book`. To get that link: Google Calendar → open the appointment schedule → *Share* → copy
+  the `calendar.app.google/…` link. The page follows it and embeds the booking calendar.
 
 Changes appear on the site immediately; there is nothing to redeploy.
 

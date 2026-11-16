@@ -143,7 +143,7 @@ function enhanceImage(img: Element, isFirst: boolean) {
   const local = src.startsWith('/') && !src.startsWith('//');
   if ((local || OPTIMISABLE_HOST.test(src)) && !/\.(svg|gif)(\?.*)?$/i.test(src)) {
     props.srcSet = IMAGE_WIDTHS.map((w) => `${optimisedSrc(src, w)} ${w}w`).join(', ');
-    props.sizes = '(max-width: 640px) calc(100vw - 48px), 512px';
+    props.sizes = '(max-width: 640px) calc(100vw - 48px), 640px';
     props.src = optimisedSrc(src, 1080);
   }
 }

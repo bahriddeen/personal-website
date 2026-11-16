@@ -4,6 +4,7 @@ import type { SiteSettings } from '@/lib/site';
 
 export const POST_STATUSES = ['draft', 'published'] as const;
 export const TALK_TYPES = ['talk', 'podcast', 'video'] as const;
+export const SUBSCRIBER_STATUSES = ['pending', 'active', 'unsubscribed'] as const;
 
 export const posts = pgTable('posts', {
   id: serial('id').primaryKey(),
@@ -54,4 +55,30 @@ export const settings = pgTable('settings', {
 export const redirects = pgTable('redirects', {
   fromSlug: text('from_slug').primaryKey(),
   toSlug: text('to_slug').notNull(),
+});
+
+/**
+ * Newsletter list. A signup starts "pending" until the address is confirmed from the email
+ * (double opt-in). `token` is a random secret used in the confirm and unsubscribe links.
+ */
+export const subscribers = pgTable('subscribers', {
+  id: serial('id').primaryKey(),
+  /** Stored lowercased. */
+  email: text('email').notNull().unique(),
+  status: text('status', { enum: SUBSCRIBER_STATUSES }).notNull().default('pending'),
+  token: text('token').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  /** Last time a confirmation email went out; limits re-sends. */
+  confirmSentAt: timestamp('confirm_sent_at', { withTimezone: true, mode: 'date' }),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true, mode: 'date' }),
+  unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true, mode: 'date' }),
+});
+
+/** One row per post emailed to subscribers, so a post is never sent twice. */
+export const newsletterIssues = pgTable('newsletter_issues', {
+  postId: integer('post_id')
+    .primaryKey()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  sentAt: timestamp('sent_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  recipients: integer('recipients').notNull().default(0),
 });

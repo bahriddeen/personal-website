@@ -56,13 +56,6 @@ html.dark {
     transform: scale(0.75);
   }
 }
-.xScrollbars {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.xScrollbars::-webkit-scrollbar {
-  display: none;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .reveal,

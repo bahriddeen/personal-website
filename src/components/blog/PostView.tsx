@@ -201,7 +201,7 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
           </header>
 
           <article
-            className="fade prose prose-zinc w-full max-w-prose animate-fadeMd"
+            className="fade prose prose-zinc w-full max-w-none animate-fadeMd"
             onClick={handleCopyClick}
             dangerouslySetInnerHTML={{ __html: html }}
           />

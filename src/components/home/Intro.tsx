@@ -9,7 +9,7 @@ import type { SiteSettings } from '@/lib/site';
 /** Bio line, social links and the tools strip at the top of the home page. */
 export function Intro({ site }: { site: SiteSettings }) {
   return (
-    <section className="mt-12 flex w-full max-w-lg flex-col items-center text-center sm:mt-24">
+    <section className="mt-12 flex w-full max-w-[640px] flex-col items-center text-center sm:mt-24">
       <BlurReveal
         as="h1"
         className="text-balance text-2xl font-semibold leading-snug text-zinc-800 dark:text-zinc-100 sm:text-3xl sm:leading-snug"

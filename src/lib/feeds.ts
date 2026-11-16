@@ -300,6 +300,8 @@ export function sitemapXml(posts: PostSummary[], pageLastmod: string): string {
     entry('/blogs', latest, 'weekly', '0.9'),
     entry('/about', pageLastmod, 'monthly', '0.8'),
     entry('/talks', pageLastmod, 'monthly', '0.8'),
+    entry('/newsletter', pageLastmod, 'yearly', '0.5'),
+    entry('/book', pageLastmod, 'monthly', '0.6'),
     ...posts.map((p) => entry(`/blogs/${p.slug}`, isoDay(p.updatedAt), 'monthly', '0.7')),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;

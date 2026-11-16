@@ -107,7 +107,7 @@ export function FeaturedPosts({ posts }: { posts: PostSummary[] }) {
         ))}
       </div>
 
-      <div className="mx-auto mt-20 hidden w-full max-w-lg justify-between gap-6 sm:flex">
+      <div className="mx-auto mt-20 hidden w-full max-w-[640px] justify-between gap-6 sm:flex">
         <div className="flex w-2/3 flex-col gap-6">
           <div>
             <p className={label}>Title</p>
