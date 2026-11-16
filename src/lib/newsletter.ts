@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
 import { newsletterIssues, posts, subscribers } from '@/lib/db/schema';
-import { escapeHtml, sendEmails, type EmailMessage } from '@/lib/email';
+import { emailConfigured, escapeHtml, sendEmails, type EmailMessage } from '@/lib/email';
 import { SITE_URL, absoluteUrl } from '@/lib/site';
 
 /** A pending address gets at most one confirmation email per window. */
@@ -88,41 +88,78 @@ ${button(url, 'Read the post')}`,
 
 /* ------------------------------------------------------------- operations */
 
+/** Whether a confirmation email went out, or the signup is waiting for email to be set up. */
+export type SubscribeOutcome = 'sent' | 'queued';
+
+/** Production without RESEND_API_KEY saves signups and sends their confirmations later. */
+function canSendNow(): boolean {
+  return emailConfigured() || process.env.NODE_ENV === 'development';
+}
+
 /**
  * Starts (or restarts) a subscription and emails the confirmation link. Callers answer
  * the visitor the same way whatever happens here, so the form never reveals who is on
  * the list.
  */
-export async function subscribe(rawEmail: string, siteTitle: string): Promise<void> {
+export async function subscribe(rawEmail: string, siteTitle: string): Promise<SubscribeOutcome> {
   const db = getDb();
   const email = normalizeEmail(rawEmail);
   const now = new Date();
+  const sendNow = canSendNow();
   const [existing] = await db.select().from(subscribers).where(eq(subscribers.email, email)).limit(1);
 
-  if (existing?.status === 'active') return;
+  if (existing?.status === 'active') return 'sent';
   if (
     existing?.status === 'pending' &&
     existing.confirmSentAt &&
     now.getTime() - existing.confirmSentAt.getTime() < CONFIRM_RESEND_MS
   ) {
-    return;
+    return 'sent';
   }
 
+  const confirmSentAt = sendNow ? now : null;
   let token: string;
   if (existing) {
     token = existing.status === 'pending' ? existing.token : newToken();
     await db
       .update(subscribers)
-      .set({ status: 'pending', token, confirmSentAt: now, unsubscribedAt: null })
+      .set({ status: 'pending', token, confirmSentAt, unsubscribedAt: null })
       .where(eq(subscribers.id, existing.id));
   } else {
     token = newToken();
     await db
       .insert(subscribers)
-      .values({ email, token, status: 'pending', confirmSentAt: now })
+      .values({ email, token, status: 'pending', confirmSentAt })
       .onConflictDoNothing({ target: subscribers.email });
   }
+  if (!sendNow) return 'queued';
   await sendEmails([confirmEmail(siteTitle, email, token)]);
+  return 'sent';
+}
+
+/** Signups saved while email was not set up, still waiting for their first confirmation. */
+export async function countQueuedConfirmations(): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: count() })
+    .from(subscribers)
+    .where(and(eq(subscribers.status, 'pending'), isNull(subscribers.confirmSentAt)));
+  return Number(row?.n ?? 0);
+}
+
+/** Sends the confirmation email to every queued signup. Returns how many went out. */
+export async function sendQueuedConfirmations(siteTitle: string): Promise<number> {
+  const db = getDb();
+  const queued = await db
+    .select({ id: subscribers.id, email: subscribers.email, token: subscribers.token })
+    .from(subscribers)
+    .where(and(eq(subscribers.status, 'pending'), isNull(subscribers.confirmSentAt)));
+  if (queued.length === 0) return 0;
+  const sent = await sendEmails(queued.map((s) => confirmEmail(siteTitle, s.email, s.token)));
+  await db
+    .update(subscribers)
+    .set({ confirmSentAt: new Date() })
+    .where(inArray(subscribers.id, queued.map((s) => s.id)));
+  return sent;
 }
 
 /** Returns false when the token matches nobody or the address has since unsubscribed. */

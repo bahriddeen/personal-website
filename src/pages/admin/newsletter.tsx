@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { emailConfigured } from '@/lib/email';
 import { formatDate } from '@/lib/format';
 import {
+  countQueuedConfirmations,
   listIssues,
   recentSubscribers,
   subscriberCounts,
@@ -20,16 +21,18 @@ type Props = {
   subscribers: SubscriberRow[];
   issues: IssueRow[];
   configured: boolean;
+  queued: number;
 };
 
 export const getServerSideProps: GetServerSideProps<Props> = (ctx) =>
   adminPage(ctx, async () => {
-    const [counts, subscribers, issues] = await Promise.all([
+    const [counts, subscribers, issues, queued] = await Promise.all([
       subscriberCounts(),
       recentSubscribers(),
       listIssues(),
+      countQueuedConfirmations(),
     ]);
-    return { props: { counts, subscribers, issues, configured: emailConfigured() } };
+    return { props: { counts, subscribers, issues, queued, configured: emailConfigured() } };
   });
 
 const card = 'rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900';
@@ -40,8 +43,16 @@ const STATUS_STYLE: Record<SubscriberRow['status'], string> = {
   unsubscribed: 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200',
 };
 
-export default function AdminNewsletterPage({ counts, subscribers, issues: initial, configured }: Props) {
+export default function AdminNewsletterPage({
+  counts,
+  subscribers,
+  issues: initial,
+  configured,
+  queued: initialQueued,
+}: Props) {
   const [issues, setIssues] = useState(initial);
+  const [queued, setQueued] = useState(initialQueued);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [message, setMessage] = useState<Message>(null);
 
@@ -71,6 +82,22 @@ export default function AdminNewsletterPage({ counts, subscribers, issues: initi
     }
   }
 
+  async function sendConfirmations() {
+    setConfirmBusy(true);
+    setMessage(null);
+    try {
+      const res = await adminFetch<{ sent: number }>('/api/admin/newsletter', 'POST', {
+        action: 'send-confirmations',
+      });
+      setQueued(0);
+      setMessage({ kind: 'ok', text: `Sent ${res.sent} confirmation ${res.sent === 1 ? 'email' : 'emails'}.` });
+    } catch (err) {
+      setMessage({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
   return (
     <AdminShell title="Newsletter" wide>
       <h1 className="mb-6 text-2xl font-semibold">Newsletter</h1>
@@ -78,8 +105,20 @@ export default function AdminNewsletterPage({ counts, subscribers, issues: initi
       {!configured && (
         <p className="mb-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           Email sending isn&apos;t set up yet. Add <code>RESEND_API_KEY</code> and <code>NEWSLETTER_FROM</code> to
-          the environment. Until then, development prints emails to the server log and production refuses to send.
+          the environment. Until then, signups are saved as waiting, and their confirmation emails can be sent from here
+          once email works. (Development prints emails to the server log instead.)
         </p>
+      )}
+
+      {queued > 0 && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p>
+            {queued} {queued === 1 ? 'signup is' : 'signups are'} waiting for a confirmation email.
+          </p>
+          <Btn variant="primary" disabled={!configured || confirmBusy} onClick={() => void sendConfirmations()}>
+            {confirmBusy ? 'Sending…' : 'Send confirmation emails'}
+          </Btn>
+        </div>
       )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">

@@ -19,6 +19,7 @@ function sameOrigin(req: NextApiRequest): boolean {
 }
 
 const DONE = { ok: true, message: 'Check your inbox for a link to confirm your subscription.' };
+const QUEUED = { ok: true, message: "Thanks, you're on the list. A confirmation email will follow." };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Cache-Control', 'no-store');
@@ -35,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const site = await getSettings();
-    await subscribe(parsed.data.email, site.title);
-    return res.status(200).json(DONE);
+    const outcome = await subscribe(parsed.data.email, site.title);
+    return res.status(200).json(outcome === 'queued' ? QUEUED : DONE);
   } catch (err) {
     console.error('[newsletter] subscribe failed', err);
     return res.status(500).json({ error: 'Could not subscribe you right now. Please try again later.' });

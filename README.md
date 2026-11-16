@@ -115,8 +115,9 @@ Everything is done at `/admin` after signing in with GitHub.
 - **Newsletter** — subscriber counts, latest signups, and a *Send to subscribers* button for
   each published post (each post can be sent once). People sign up from the form under every
   post, on `/blogs` and on `/newsletter`; they confirm by email first (double opt-in), and every
-  email has a one-click unsubscribe link. Locally, without `RESEND_API_KEY`, emails are printed
-  to the dev server log instead of being sent.
+  email has a one-click unsubscribe link. Without `RESEND_API_KEY`, production saves signups
+  as waiting and Admin → Newsletter offers *Send confirmation emails* once email is set up;
+  development prints emails to the server log instead.
 - **Settings** — site title, bio line, the scrolling strip on the home page, social links,
   the project card, the default description and share image, and the Google booking link for
   `/book`. To get that link: Google Calendar → open the appointment schedule → *Share* → copy
