@@ -1,9 +1,16 @@
 import { ArrowUpRight, CalendarBlank } from '@phosphor-icons/react';
 import type { GetStaticProps } from 'next';
+import Head from 'next/head';
 import { Layout, Section } from '@/components/layout/Layout';
 import { FollowBlock } from '@/components/ui/Social';
 import { getSettings } from '@/lib/db/queries';
-import { bookingEmbedUrl, isBookingUrl, resolveBookingUrl, type SiteSettings } from '@/lib/site';
+import {
+  BOOKING_PRECONNECT,
+  bookingEmbedUrl,
+  isBookingUrl,
+  resolveBookingUrl,
+  type SiteSettings,
+} from '@/lib/site';
 
 type Props = { site: SiteSettings; embed: string | null };
 
@@ -34,13 +41,22 @@ export default function BookPage({ site, embed }: Props) {
           </p>
         </div>
 
+        {embed && (
+          <Head>
+            {BOOKING_PRECONNECT.map((p) => (
+              <link key={p.href} rel="preconnect" href={p.href} crossOrigin={p.crossOrigin} />
+            ))}
+          </Head>
+        )}
+
         {embed ? (
-          <div className="fade w-full animate-fadeMd overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:ring-white/10">
+          <div className="relative w-full overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:ring-white/10">
+            {/* Shows through the iframe until Google's page paints its own background over it. */}
+            <BookingSkeleton />
             <iframe
               src={embed}
               title={`Book a call with ${site.author}`}
-              className="block h-[760px] w-full border-0"
-              loading="lazy"
+              className="relative block h-[760px] w-full border-0"
             />
           </div>
         ) : url ? (
@@ -68,5 +84,24 @@ export default function BookPage({ site, embed }: Props) {
         <FollowBlock links={site.links} className="mt-16" />
       </Section>
     </Layout>
+  );
+}
+
+function BookingSkeleton() {
+  return (
+    <div aria-hidden="true" className="absolute inset-0 flex animate-pulse flex-col gap-6 p-8">
+      <div className="h-6 w-48 rounded-lg bg-zinc-200" />
+      <div className="h-4 w-72 max-w-full rounded-lg bg-zinc-100" />
+      <div className="mt-4 grid grid-cols-7 gap-3">
+        {Array.from({ length: 35 }, (_, i) => (
+          <div key={i} className="aspect-square rounded-full bg-zinc-100" />
+        ))}
+      </div>
+      <div className="mt-2 flex flex-col gap-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-11 rounded-xl bg-zinc-100" />
+        ))}
+      </div>
+    </div>
   );
 }

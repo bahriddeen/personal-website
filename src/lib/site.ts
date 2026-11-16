@@ -1,6 +1,7 @@
 /** Site-wide settings. Stored as one JSON row in the database and editable in Admin → Settings. */
 
-export type SocialKind = 'github' | 'linkedin' | 'telegram' | 'x' | 'youtube' | 'coffee' | 'email' | 'website';
+export type SocialKind =
+  'github' | 'linkedin' | 'telegram' | 'x' | 'youtube' | 'coffee' | 'email' | 'website';
 
 export type SocialLink = {
   kind: SocialKind;
@@ -118,6 +119,30 @@ export async function resolveBookingUrl(value: string): Promise<string> {
     console.warn('[book] could not resolve booking short link', (err as Error).message);
   }
   return value;
+}
+
+/**
+ * Hosts the embedded Google booking page pulls from (document, JS/CSS, fonts, data API).
+ * Opening these connections early saves a DNS + TLS round trip each before the iframe needs them.
+ */
+export const BOOKING_PRECONNECT = [
+  { href: 'https://calendar.google.com' },
+  { href: 'https://www.gstatic.com' },
+  { href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' as const },
+  { href: 'https://calendar-pa.clients6.google.com' },
+];
+
+/** Starts the booking-page connections on intent (hovering or focusing the link to /book). */
+export function warmBookingConnections(): void {
+  if (typeof document === 'undefined' || document.querySelector('link[data-booking-warm]')) return;
+  for (const { href, crossOrigin } of BOOKING_PRECONNECT) {
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = href;
+    if (crossOrigin) link.crossOrigin = crossOrigin;
+    link.dataset.bookingWarm = '';
+    document.head.appendChild(link);
+  }
 }
 
 export function absoluteUrl(path: string): string {

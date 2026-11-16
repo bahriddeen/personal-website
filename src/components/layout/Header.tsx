@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { warmBookingConnections } from '@/lib/site';
 
 const navLink =
   'group flex w-max items-center justify-center gap-2.5 rounded-2xl bg-transparent px-4 py-2.5 font-medium text-zinc-600 active:scale-95 sm:transition-transform sm:hover:bg-zinc-100 dark:text-white dark:hover:bg-zinc-800';
@@ -90,6 +91,11 @@ function MoreMenu() {
               tabIndex={open ? 0 : -1}
               className="block rounded-xl px-4 py-3 font-medium text-zinc-700 sm:hover:bg-zinc-100 dark:text-zinc-200 dark:sm:hover:bg-zinc-700"
               onClick={() => setOpen(false)}
+              // Opening /book's Google connections on intent shaves time off the embed.
+              {...(item.href === '/book' && {
+                onPointerEnter: warmBookingConnections,
+                onFocus: warmBookingConnections,
+              })}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
