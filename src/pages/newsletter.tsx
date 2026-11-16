@@ -77,10 +77,10 @@ export default function NewsletterPage({ site }: Props) {
   const status = typeof query.status === 'string' ? query.status : '';
   const token = typeof query.unsubscribe === 'string' ? query.unsubscribe : '';
 
+  // Before the router is ready the query is empty, so the server-rendered HTML is the
+  // signup view (what search engines and no-JS visitors should see).
   let body: ReactNode;
-  if (!isReady) {
-    body = null;
-  } else if (token) {
+  if (isReady && token) {
     body = <Unsubscribe token={token} />;
   } else if (status === 'confirmed') {
     body = (
