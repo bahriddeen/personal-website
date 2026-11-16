@@ -50,13 +50,11 @@ export default function BookPage({ site, embed }: Props) {
         )}
 
         {embed ? (
-          <div className="relative w-full overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:ring-white/10">
-            {/* Shows through the iframe until Google's page paints its own background over it. */}
-            <BookingSkeleton />
+          <div className="w-full overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/5 dark:ring-white/10">
             <iframe
               src={embed}
               title={`Book a call with ${site.author}`}
-              className="relative block h-[760px] w-full border-0"
+              className="block h-[760px] w-full border-0"
             />
           </div>
         ) : url ? (
@@ -84,24 +82,5 @@ export default function BookPage({ site, embed }: Props) {
         <FollowBlock links={site.links} className="mt-16" />
       </Section>
     </Layout>
-  );
-}
-
-function BookingSkeleton() {
-  return (
-    <div aria-hidden="true" className="absolute inset-0 flex animate-pulse flex-col gap-6 p-8">
-      <div className="h-6 w-48 rounded-lg bg-zinc-200" />
-      <div className="h-4 w-72 max-w-full rounded-lg bg-zinc-100" />
-      <div className="mt-4 grid grid-cols-7 gap-3">
-        {Array.from({ length: 35 }, (_, i) => (
-          <div key={i} className="aspect-square rounded-full bg-zinc-100" />
-        ))}
-      </div>
-      <div className="mt-2 flex flex-col gap-3">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="h-11 rounded-xl bg-zinc-100" />
-        ))}
-      </div>
-    </div>
   );
 }
