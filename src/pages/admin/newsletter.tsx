@@ -2,17 +2,26 @@ import type { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { AdminShell, Btn, Notice, inputClass, type Message } from '@/components/admin/AdminShell';
+import { ListBody, ListPager, ListToolbar } from '@/components/admin/ListControls';
 import { adminFetch } from '@/lib/admin/client';
+import type { ListPage } from '@/lib/admin/paging';
 import { adminPage } from '@/lib/admin/server';
-import { listCampaigns, type CampaignStatus, type CampaignSummary } from '@/lib/campaigns';
+import { usePagedList } from '@/lib/admin/use-paged-list';
+import {
+  listCampaignPage,
+  type CampaignFilter,
+  type CampaignStatus,
+  type CampaignSummary,
+} from '@/lib/campaigns';
 import { cn } from '@/lib/cn';
 import { emailConfigured } from '@/lib/email';
 import { formatDate } from '@/lib/format';
 import {
   countQueuedConfirmations,
-  listIssues,
+  listIssuePage,
   listSubscribers,
   subscriberCounts,
+  type IssueFilter,
   type IssueRow,
   type SubscriberCounts,
   type SubscriberPage,
@@ -23,8 +32,8 @@ import {
 type Props = {
   counts: SubscriberCounts;
   subscribers: SubscriberPage;
-  issues: IssueRow[];
-  campaigns: CampaignSummary[];
+  issues: ListPage<IssueRow, IssueFilter>;
+  campaigns: ListPage<CampaignSummary, CampaignFilter>;
   configured: boolean;
   queued: number;
 };
@@ -34,9 +43,9 @@ export const getServerSideProps: GetServerSideProps<Props> = (ctx) =>
     const [counts, subscribers, issues, queued, campaigns] = await Promise.all([
       subscriberCounts(),
       listSubscribers({ search: '', status: 'all', page: 1 }),
-      listIssues(),
+      listIssuePage({ search: '', status: 'unsent', page: 1 }),
       countQueuedConfirmations(),
-      listCampaigns(),
+      listCampaignPage({ search: '', status: 'all', page: 1 }),
     ]);
     return { props: { counts, subscribers, issues, queued, campaigns, configured: emailConfigured() } };
   });
@@ -52,42 +61,14 @@ const STATUS_STYLE: Record<SubscriberRow['status'], string> = {
 export default function AdminNewsletterPage({
   counts,
   subscribers,
-  issues: initial,
+  issues,
   campaigns,
   configured,
   queued: initialQueued,
 }: Props) {
-  const [issues, setIssues] = useState(initial);
   const [queued, setQueued] = useState(initialQueued);
   const [confirmBusy, setConfirmBusy] = useState(false);
-  const [busy, setBusy] = useState<number | null>(null);
   const [message, setMessage] = useState<Message>(null);
-
-  async function send(issue: IssueRow) {
-    const ok = window.confirm(
-      `Email “${issue.title}” to ${counts.active} active ${counts.active === 1 ? 'subscriber' : 'subscribers'}? This can't be undone.`,
-    );
-    if (!ok) return;
-    setBusy(issue.postId);
-    setMessage(null);
-    try {
-      const res = await adminFetch<{ recipients: number }>('/api/admin/newsletter', 'POST', {
-        postId: issue.postId,
-      });
-      setIssues((list) =>
-        list.map((i) =>
-          i.postId === issue.postId
-            ? { ...i, sentAt: new Date().toISOString(), recipients: res.recipients }
-            : i,
-        ),
-      );
-      setMessage({ kind: 'ok', text: `Sent “${issue.title}” to ${res.recipients} subscribers.` });
-    } catch (err) {
-      setMessage({ kind: 'error', text: (err as Error).message });
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function sendConfirmations() {
     setConfirmBusy(true);
@@ -143,46 +124,15 @@ export default function AdminNewsletterPage({
         ))}
       </div>
 
-      <CampaignList campaigns={campaigns} />
-
-      <section className={cn(card, 'mb-6')} aria-labelledby="nl-issues">
-        <h2 id="nl-issues" className="mb-1 text-lg font-semibold">Send a post</h2>
-        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          Each published post can be emailed once. The email has the title, description and a link to the post.
-        </p>
-        <div className="mb-4">
+      {message && (
+        <div className="mb-6">
           <Notice message={message} />
         </div>
-        {issues.length === 0 ? (
-          <p className="text-sm text-zinc-500">No published posts yet.</p>
-        ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {issues.map((issue) => (
-              <li key={issue.postId} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{issue.title}</p>
-                  <p className="text-sm text-zinc-500">
-                    Published {issue.publishedAt ? formatDate(issue.publishedAt) : '—'}
-                  </p>
-                </div>
-                {issue.sentAt ? (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Sent {formatDate(issue.sentAt)} to {issue.recipients}
-                  </p>
-                ) : (
-                  <Btn
-                    variant="primary"
-                    disabled={busy !== null || counts.active === 0}
-                    onClick={() => void send(issue)}
-                  >
-                    {busy === issue.postId ? 'Sending…' : 'Send to subscribers'}
-                  </Btn>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      )}
+
+      <CampaignList initial={campaigns} />
+
+      <IssueList initial={issues} activeSubscribers={counts.active} />
 
       <SubscriberList initial={subscribers} counts={counts} />
     </AdminShell>
@@ -387,8 +337,17 @@ const CAMPAIGN_STYLE: Record<CampaignStatus, string> = {
   sent: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
 };
 
+const CAMPAIGN_FILTERS: ReadonlyArray<readonly [CampaignFilter, string]> = [
+  ['all', 'All'],
+  ['draft', 'Drafts'],
+  ['sent', 'Sent'],
+];
+
 /** Emails written on their own (updates, announcements, offers): not posts, never on the site. */
-function CampaignList({ campaigns }: { campaigns: CampaignSummary[] }) {
+function CampaignList({ initial }: { initial: ListPage<CampaignSummary, CampaignFilter> }) {
+  const list = usePagedList('/api/admin/campaigns', initial);
+  const { data } = list;
+  const filtered = list.search.trim() !== '' || list.status !== 'all';
   return (
     <section className={cn(card, 'mb-6')} aria-labelledby="nl-emails">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
@@ -405,34 +364,172 @@ function CampaignList({ campaigns }: { campaigns: CampaignSummary[] }) {
       <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
         Updates, announcements and offers written just for subscribers. They are not posted on the site.
       </p>
-      {campaigns.length === 0 ? (
+      {data.counts.all === 0 ? (
         <p className="text-sm text-zinc-500">No emails yet.</p>
       ) : (
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-          {campaigns.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
-              <Link
-                href={`/admin/newsletter/${c.id}`}
-                className={cn(
-                  'min-w-0 flex-1 basis-48 truncate font-medium underline-offset-2 hover:underline',
-                  !c.subject && 'italic text-zinc-500',
-                )}
-              >
-                {c.subject || '(No subject)'}
-              </Link>
-              <span className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', CAMPAIGN_STYLE[c.status])}>
-                  {c.status}
-                </span>
-                <span className="tabular-nums">
-                  {c.status === 'sent' && c.sentAt
-                    ? `${formatDate(c.sentAt)} · ${c.recipients} ${c.recipients === 1 ? 'recipient' : 'recipients'}`
-                    : `Edited ${formatDate(c.updatedAt)}`}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ListToolbar
+            id="nl-email-search"
+            search={list.search}
+            onSearch={list.setSearch}
+            placeholder="Search by subject"
+            filters={CAMPAIGN_FILTERS}
+            status={list.status}
+            onStatus={list.setStatus}
+            counts={data.counts}
+            filterLabel="Filter emails"
+          />
+          <ListBody
+            loading={list.loading}
+            error={list.error}
+            empty={data.rows.length === 0 ? (filtered ? 'No emails match.' : 'No emails yet.') : null}
+          >
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {data.rows.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
+                  <Link
+                    href={`/admin/newsletter/${c.id}`}
+                    className={cn(
+                      'min-w-0 flex-1 basis-48 truncate font-medium underline-offset-2 hover:underline',
+                      !c.subject && 'italic text-zinc-500',
+                    )}
+                  >
+                    {c.subject || '(No subject)'}
+                  </Link>
+                  <span className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', CAMPAIGN_STYLE[c.status])}>
+                      {c.status}
+                    </span>
+                    <span className="tabular-nums">
+                      {c.status === 'sent' && c.sentAt
+                        ? `${formatDate(c.sentAt)} · ${c.recipients} ${c.recipients === 1 ? 'recipient' : 'recipients'}`
+                        : `Edited ${formatDate(c.updatedAt)}`}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </ListBody>
+          <ListPager page={data.page} pageSize={data.pageSize} total={data.total} loading={list.loading} onPage={list.setPage} />
+        </>
+      )}
+    </section>
+  );
+}
+
+const ISSUE_FILTERS: ReadonlyArray<readonly [IssueFilter, string]> = [
+  ['unsent', 'Not sent yet'],
+  ['sent', 'Sent'],
+  ['all', 'All'],
+];
+
+/** Published posts to email, a page at a time; the ones not sent yet come first. */
+function IssueList({
+  initial,
+  activeSubscribers,
+}: {
+  initial: ListPage<IssueRow, IssueFilter>;
+  activeSubscribers: number;
+}) {
+  const list = usePagedList('/api/admin/issues', initial);
+  const { data } = list;
+  const [busy, setBusy] = useState<number | null>(null);
+  const [message, setMessage] = useState<Message>(null);
+
+  async function send(issue: IssueRow) {
+    const ok = window.confirm(
+      `Email “${issue.title}” to ${activeSubscribers} active ${activeSubscribers === 1 ? 'subscriber' : 'subscribers'}? This can't be undone.`,
+    );
+    if (!ok) return;
+    setBusy(issue.postId);
+    setMessage(null);
+    try {
+      const res = await adminFetch<{ recipients: number }>('/api/admin/newsletter', 'POST', {
+        postId: issue.postId,
+      });
+      setMessage({
+        kind: 'ok',
+        text: `Sent “${issue.title}” to ${res.recipients} ${res.recipients === 1 ? 'subscriber' : 'subscribers'}.`,
+      });
+      // The post now belongs under "Sent".
+      list.reload();
+    } catch (err) {
+      setMessage({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const searching = list.search.trim() !== '';
+  const empty =
+    data.rows.length > 0
+      ? null
+      : searching
+        ? 'No posts match.'
+        : list.status === 'unsent'
+          ? 'Every published post has been sent.'
+          : list.status === 'sent'
+            ? 'No posts have been sent yet.'
+            : 'No published posts yet.';
+
+  return (
+    <section className={cn(card, 'mb-6')} aria-labelledby="nl-issues">
+      <h2 id="nl-issues" className="mb-1 text-lg font-semibold">
+        Send a post
+      </h2>
+      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+        Each published post can be emailed once. The email has the title, description and a link to the post.
+        {activeSubscribers === 0 && ' Sending is available once someone has confirmed their subscription.'}
+      </p>
+      {message && (
+        <div className="mb-4">
+          <Notice message={message} />
+        </div>
+      )}
+      {data.counts.all === 0 ? (
+        <p className="text-sm text-zinc-500">No published posts yet.</p>
+      ) : (
+        <>
+          <ListToolbar
+            id="nl-post-search"
+            search={list.search}
+            onSearch={list.setSearch}
+            placeholder="Search by title"
+            filters={ISSUE_FILTERS}
+            status={list.status}
+            onStatus={list.setStatus}
+            counts={data.counts}
+            filterLabel="Filter posts"
+          />
+          <ListBody loading={list.loading} error={list.error} empty={empty}>
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {data.rows.map((issue) => (
+                <li key={issue.postId} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p className="truncate font-medium">{issue.title}</p>
+                    <p className="text-sm text-zinc-500">
+                      Published {issue.publishedAt ? formatDate(issue.publishedAt) : '—'}
+                    </p>
+                  </div>
+                  {issue.sentAt ? (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Sent {formatDate(issue.sentAt)} to {issue.recipients}
+                    </p>
+                  ) : (
+                    <Btn
+                      variant="primary"
+                      disabled={busy !== null || activeSubscribers === 0}
+                      onClick={() => void send(issue)}
+                    >
+                      {busy === issue.postId ? 'Sending…' : 'Send to subscribers'}
+                    </Btn>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </ListBody>
+          <ListPager page={data.page} pageSize={data.pageSize} total={data.total} loading={list.loading} onPage={list.setPage} />
+        </>
       )}
     </section>
   );

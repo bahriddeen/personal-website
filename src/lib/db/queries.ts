@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { clampPage, containsPattern, type ListPage, type ListQuery } from '@/lib/admin/paging';
 import { withDefaults, type SiteSettings } from '@/lib/site';
 import { getDb } from './client';
 import { pages, posts, projects, redirects, settings, talks, type PROJECT_KINDS, type PROJECT_STAGES } from './schema';
@@ -134,9 +135,63 @@ export async function getPublicPost(slug: string): Promise<Post | null> {
   return row ? toPost(row) : null;
 }
 
-export async function listAllPosts(): Promise<PostSummary[]> {
-  const rows = await getDb().select().from(posts).orderBy(desc(posts.updatedAt));
-  return rows.map(toSummary);
+/* Admin posts list: paged and searchable, so it stays quick however many posts there are. */
+
+export const POST_FILTERS = ['all', 'draft', 'scheduled', 'published'] as const;
+export type PostFilter = (typeof POST_FILTERS)[number];
+export type PostState = ReturnType<typeof displayStatus>;
+export type AdminPostRow = PostSummary & { state: PostState };
+export const POST_PAGE_SIZE = 25;
+
+const isScheduled = and(eq(posts.status, 'published'), gt(posts.publishedAt, sql`now()`));
+const isLive = and(eq(posts.status, 'published'), or(isNull(posts.publishedAt), lte(posts.publishedAt, sql`now()`)));
+
+function postFilter(filter: PostFilter) {
+  if (filter === 'draft') return eq(posts.status, 'draft');
+  if (filter === 'scheduled') return isScheduled;
+  if (filter === 'published') return isLive;
+  return undefined;
+}
+
+/** Posts newest-edited first, one page at a time, matching the title or address. */
+export async function listPostPage(query: ListQuery<PostFilter>): Promise<ListPage<AdminPostRow, PostFilter>> {
+  const db = getDb();
+  const pattern = containsPattern(query.search);
+  const where = and(
+    postFilter(query.status),
+    query.search ? or(ilike(posts.title, pattern), ilike(posts.slug, pattern)) : undefined,
+  );
+  const [[{ n }], [counts]] = await Promise.all([
+    db.select({ n: count() }).from(posts).where(where),
+    db
+      .select({
+        all: sql<number>`count(*)::int`,
+        draft: sql<number>`(count(*) filter (where ${eq(posts.status, 'draft')}))::int`,
+        scheduled: sql<number>`(count(*) filter (where ${isScheduled}))::int`,
+        published: sql<number>`(count(*) filter (where ${isLive}))::int`,
+      })
+      .from(posts),
+  ]);
+  const total = Number(n);
+  const page = clampPage(query.page, total, POST_PAGE_SIZE);
+  const rows = await db
+    .select()
+    .from(posts)
+    .where(where)
+    .orderBy(desc(posts.updatedAt), desc(posts.id))
+    .limit(POST_PAGE_SIZE)
+    .offset((page - 1) * POST_PAGE_SIZE);
+  return {
+    ...query,
+    page,
+    total,
+    pageSize: POST_PAGE_SIZE,
+    counts,
+    rows: rows.map((r) => {
+      const summary = toSummary(r);
+      return { ...summary, state: displayStatus(summary) };
+    }),
+  };
 }
 
 export async function getPostById(id: number): Promise<Post | null> {

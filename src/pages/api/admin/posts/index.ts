@@ -1,9 +1,14 @@
 import { isUniqueViolation, parseBody, revalidate, withAdmin } from '@/lib/admin/server';
 import { postSchema } from '@/lib/admin/validation';
 import { toPostInput } from '@/lib/admin/posts';
-import { createPost, isSlugTaken } from '@/lib/db/queries';
+import { parseListQuery } from '@/lib/admin/paging';
+import { createPost, isSlugTaken, listPostPage, POST_FILTERS } from '@/lib/db/queries';
 
 export default withAdmin({
+  /** `GET ?q=&status=draft|scheduled|published|all&page=` → one page of posts. */
+  GET: async (req, res) =>
+    res.status(200).json(await listPostPage(parseListQuery(req.query, POST_FILTERS, 'all'))),
+
   POST: async (req, res) => {
     const data = parseBody(postSchema, req, res);
     if (!data) return;

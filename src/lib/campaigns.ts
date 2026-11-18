@@ -2,7 +2,8 @@
  * Newsletter emails written on their own (announcements, updates, offers): not blog posts and
  * never shown on the site. Drafted and sent from Admin → Newsletter to every active subscriber.
  */
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { clampPage, containsPattern, type ListPage, type ListQuery } from '@/lib/admin/paging';
 import { getDb } from '@/lib/db/client';
 import { CAMPAIGN_STATUSES, campaigns, subscribers } from '@/lib/db/schema';
 import { sendEmails } from '@/lib/email';
@@ -43,9 +44,35 @@ function toCampaign(r: Row): Campaign {
   };
 }
 
-/** Newest first: drafts and sends mixed, ordered by when they were last touched. */
-export async function listCampaigns(limit = 100): Promise<CampaignSummary[]> {
-  const rows = await getDb()
+export const CAMPAIGN_FILTERS = ['all', 'draft', 'sent'] as const;
+export type CampaignFilter = (typeof CAMPAIGN_FILTERS)[number];
+export const CAMPAIGN_PAGE_SIZE = 10;
+
+/** "sent" includes one still going out. */
+const isSentOrSending = inArray(campaigns.status, ['sent', 'sending']);
+
+/** Emails newest-touched first, a page at a time, matching the subject. */
+export async function listCampaignPage(
+  query: ListQuery<CampaignFilter>,
+): Promise<ListPage<CampaignSummary, CampaignFilter>> {
+  const db = getDb();
+  const where = and(
+    query.status === 'draft' ? eq(campaigns.status, 'draft') : query.status === 'sent' ? isSentOrSending : undefined,
+    query.search ? ilike(campaigns.subject, containsPattern(query.search)) : undefined,
+  );
+  const [[{ n }], [counts]] = await Promise.all([
+    db.select({ n: count() }).from(campaigns).where(where),
+    db
+      .select({
+        all: sql<number>`count(*)::int`,
+        draft: sql<number>`(count(*) filter (where ${eq(campaigns.status, 'draft')}))::int`,
+        sent: sql<number>`(count(*) filter (where ${isSentOrSending}))::int`,
+      })
+      .from(campaigns),
+  ]);
+  const total = Number(n);
+  const page = clampPage(query.page, total, CAMPAIGN_PAGE_SIZE);
+  const rows = await db
     .select({
       id: campaigns.id,
       subject: campaigns.subject,
@@ -56,14 +83,23 @@ export async function listCampaigns(limit = 100): Promise<CampaignSummary[]> {
       updatedAt: campaigns.updatedAt,
     })
     .from(campaigns)
+    .where(where)
     .orderBy(desc(campaigns.updatedAt), desc(campaigns.id))
-    .limit(limit);
-  return rows.map((r) => ({
-    ...r,
-    sentAt: r.sentAt?.toISOString() ?? null,
-    createdAt: r.createdAt.toISOString(),
-    updatedAt: r.updatedAt.toISOString(),
-  }));
+    .limit(CAMPAIGN_PAGE_SIZE)
+    .offset((page - 1) * CAMPAIGN_PAGE_SIZE);
+  return {
+    ...query,
+    page,
+    total,
+    pageSize: CAMPAIGN_PAGE_SIZE,
+    counts,
+    rows: rows.map((r) => ({
+      ...r,
+      sentAt: r.sentAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    })),
+  };
 }
 
 export async function getCampaign(id: number): Promise<Campaign | null> {

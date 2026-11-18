@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
+import { clampPage, containsPattern, type ListPage, type ListQuery } from '@/lib/admin/paging';
 import { getDb } from '@/lib/db/client';
 import { newsletterIssues, posts, subscribers } from '@/lib/db/schema';
 import { emailConfigured, escapeHtml, sendEmails, type EmailMessage } from '@/lib/email';
@@ -276,10 +277,7 @@ export function parseSubscriberQuery(params: Record<string, string | string[] | 
   };
 }
 
-/** ILIKE pattern for "contains", with the wildcard characters in the search escaped. */
-export function containsPattern(search: string): string {
-  return `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-}
+export { containsPattern };
 
 function subscriberFilter(q: Pick<SubscriberQuery, 'search' | 'status'>) {
   return and(
@@ -357,9 +355,41 @@ export type IssueRow = {
   recipients: number;
 };
 
-/** Public posts, newest first, with when (if ever) each was emailed. */
-export async function listIssues(): Promise<IssueRow[]> {
-  const rows = await getDb()
+export const ISSUE_FILTERS = ['unsent', 'sent', 'all'] as const;
+export type IssueFilter = (typeof ISSUE_FILTERS)[number];
+export const ISSUE_PAGE_SIZE = 10;
+
+const isPublicPost = and(eq(posts.status, 'published'), sql`${posts.publishedAt} <= now()`);
+const wasSent = sql`${newsletterIssues.postId} is not null`;
+const notSent = sql`${newsletterIssues.postId} is null`;
+
+/**
+ * Public posts, newest first, with when (if ever) each was emailed; a page at a time, so the
+ * list stays short however many posts there are. "unsent" is what can still be sent.
+ */
+export async function listIssuePage(query: ListQuery<IssueFilter>): Promise<ListPage<IssueRow, IssueFilter>> {
+  const db = getDb();
+  const where = and(
+    isPublicPost,
+    query.status === 'sent' ? wasSent : query.status === 'unsent' ? notSent : undefined,
+    query.search ? ilike(posts.title, containsPattern(query.search)) : undefined,
+  );
+  const joined = () => db.select({ n: count() }).from(posts).leftJoin(newsletterIssues, eq(newsletterIssues.postId, posts.id));
+  const [[{ n }], [counts]] = await Promise.all([
+    joined().where(where),
+    db
+      .select({
+        all: sql<number>`count(*)::int`,
+        sent: sql<number>`(count(*) filter (where ${wasSent}))::int`,
+        unsent: sql<number>`(count(*) filter (where ${notSent}))::int`,
+      })
+      .from(posts)
+      .leftJoin(newsletterIssues, eq(newsletterIssues.postId, posts.id))
+      .where(isPublicPost),
+  ]);
+  const total = Number(n);
+  const page = clampPage(query.page, total, ISSUE_PAGE_SIZE);
+  const rows = await db
     .select({
       postId: posts.id,
       title: posts.title,
@@ -370,16 +400,25 @@ export async function listIssues(): Promise<IssueRow[]> {
     })
     .from(posts)
     .leftJoin(newsletterIssues, eq(newsletterIssues.postId, posts.id))
-    .where(and(eq(posts.status, 'published'), sql`${posts.publishedAt} <= now()`))
-    .orderBy(desc(posts.publishedAt));
-  return rows.map((r) => ({
-    postId: r.postId,
-    title: r.title,
-    slug: r.slug,
-    publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
-    sentAt: r.sentAt ? r.sentAt.toISOString() : null,
-    recipients: r.recipients ?? 0,
-  }));
+    .where(where)
+    .orderBy(desc(posts.publishedAt), desc(posts.id))
+    .limit(ISSUE_PAGE_SIZE)
+    .offset((page - 1) * ISSUE_PAGE_SIZE);
+  return {
+    ...query,
+    page,
+    total,
+    pageSize: ISSUE_PAGE_SIZE,
+    counts,
+    rows: rows.map((r) => ({
+      postId: r.postId,
+      title: r.title,
+      slug: r.slug,
+      publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
+      sentAt: r.sentAt ? r.sentAt.toISOString() : null,
+      recipients: r.recipients ?? 0,
+    })),
+  };
 }
 
 export type SendResult =
