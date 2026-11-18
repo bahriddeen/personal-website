@@ -68,6 +68,15 @@ export function parseBody<T>(schema: ZodType<T>, req: NextApiRequest, res: NextA
   return null;
 }
 
+/** A Postgres unique-index violation (e.g. two saves racing for the same slug). */
+export function isUniqueViolation(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e && depth < 5; depth++) {
+    if ((e as { code?: unknown }).code === '23505') return true;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 /** Numeric id from the route, or null after answering 400. */
 export function routeId(req: NextApiRequest, res: NextApiResponse): number | null {
   const id = Number(req.query.id);

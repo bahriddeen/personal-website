@@ -2,7 +2,8 @@
  * Builders for the machine-readable outputs: Markdown mirrors, llms.txt, RSS, sitemap,
  * robots.txt. Pure functions of their inputs so they are easy to test.
  */
-import type { Post, PostSummary, Talk } from '@/lib/db/queries';
+import type { Post, PostSummary, Project, Talk } from '@/lib/db/queries';
+import { KIND_LABELS, STAGE_LABELS } from '@/lib/projects';
 import { escapeXml, isoDay } from '@/lib/format';
 import { SITE_URL, type SiteSettings } from '@/lib/site';
 
@@ -50,7 +51,18 @@ function postLine(p: PostSummary, withDate: boolean): string {
   return `- [${p.title}](/blogs/${p.slug}.md): ${p.description}${date}`;
 }
 
-export function mdIndex(site: SiteSettings, posts: PostSummary[], today: string): string {
+function projectLine(p: Project): string {
+  const name = p.url ? `[${p.name}](${p.url})` : p.name;
+  const facts = [KIND_LABELS[p.kind], STAGE_LABELS[p.stage], p.role, p.year].filter(Boolean).join(', ');
+  return `- ${name}${p.tagline ? `: ${p.tagline}` : ''} (${facts})`;
+}
+
+export function mdIndex(
+  site: SiteSettings,
+  posts: PostSummary[],
+  today: string,
+  projects: Project[] = [],
+): string {
   return (
     frontMatter({
       title: site.title,
@@ -72,6 +84,7 @@ export function mdIndex(site: SiteSettings, posts: PostSummary[], today: string)
       '- [Blog](/blogs.md): Published writing.',
       '- [Talks](/talks.md): Talks, podcasts, and videos.',
       '',
+      ...(projects.length ? ['## Projects', '', ...projects.map(projectLine), ''] : []),
       '## Recent Posts',
       '',
       ...(posts.length ? posts.slice(0, 8).map((p) => postLine(p, false)) : ['No posts yet.']),
@@ -246,9 +259,10 @@ export function llmsFull(
   talks: Talk[],
   about: { contentMd: string; updatedAt: string },
   today: string,
+  projects: Project[] = [],
 ): string {
   const parts = [
-    mdIndex(site, posts, today),
+    mdIndex(site, posts, today, projects),
     mdAbout(site, about.contentMd, about.updatedAt),
     mdTalks(site, talks, today),
     ...posts.map(mdPost),

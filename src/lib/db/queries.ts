@@ -1,12 +1,14 @@
-import { and, desc, eq, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, lte, ne, sql } from 'drizzle-orm';
 import { withDefaults, type SiteSettings } from '@/lib/site';
 import { getDb } from './client';
-import { pages, posts, redirects, settings, talks } from './schema';
+import { pages, posts, projects, redirects, settings, talks, type PROJECT_KINDS, type PROJECT_STAGES } from './schema';
 
 /* ------------------------------------------------------------------ types */
 
 export type PostStatus = 'draft' | 'published';
 export type TalkType = 'talk' | 'podcast' | 'video';
+export type ProjectKind = (typeof PROJECT_KINDS)[number];
+export type ProjectStage = (typeof PROJECT_STAGES)[number];
 
 /** Plain JSON shapes (dates as ISO strings) so they can cross getStaticProps. */
 export type PostSummary = {
@@ -46,6 +48,21 @@ export type PostInput = {
   publishedAt: Date | null;
 };
 export type TalkInput = Omit<Talk, 'id'>;
+
+export type Project = {
+  id: number;
+  name: string;
+  tagline: string;
+  url: string;
+  imageUrl: string | null;
+  kind: ProjectKind;
+  stage: ProjectStage;
+  role: string;
+  year: string;
+  published: boolean;
+  position: number;
+};
+export type ProjectInput = Omit<Project, 'id' | 'position'>;
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -133,44 +150,51 @@ export async function isSlugTaken(slug: string, exceptId?: number): Promise<bool
   return Boolean(row);
 }
 
+// Post writes touch the redirects table too, so each runs in one transaction: either the
+// post and its redirects change together, or nothing changes.
+
 export async function createPost(input: PostInput): Promise<Post> {
-  const [row] = await getDb().insert(posts).values(input).returning();
-  // A new post taking over a slug ends any redirect that pointed away from it.
-  await getDb().delete(redirects).where(eq(redirects.fromSlug, input.slug));
-  return toPost(row);
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx.insert(posts).values(input).returning();
+    // A new post taking over a slug ends any redirect that pointed away from it.
+    await tx.delete(redirects).where(eq(redirects.fromSlug, input.slug));
+    return toPost(row);
+  });
 }
 
 export async function updatePost(id: number, input: PostInput): Promise<Post | null> {
-  const db = getDb();
-  const existing = await getPostById(id);
-  if (!existing) return null;
-  const [row] = await db
-    .update(posts)
-    .set({ ...input, updatedAt: new Date() })
-    .where(eq(posts.id, id))
-    .returning();
-  if (existing.slug !== input.slug) {
-    // Keep old links working, and collapse chains (a → b → c becomes a → c, b → c).
-    await db.update(redirects).set({ toSlug: input.slug }).where(eq(redirects.toSlug, existing.slug));
-    await db
-      .insert(redirects)
-      .values({ fromSlug: existing.slug, toSlug: input.slug })
-      .onConflictDoUpdate({ target: redirects.fromSlug, set: { toSlug: input.slug } });
-    await db.delete(redirects).where(eq(redirects.fromSlug, input.slug));
-  }
-  return toPost(row);
+  return getDb().transaction(async (tx) => {
+    const [existing] = await tx.select({ slug: posts.slug }).from(posts).where(eq(posts.id, id)).for('update');
+    if (!existing) return null;
+    const [row] = await tx
+      .update(posts)
+      .set({ ...input, updatedAt: new Date() })
+      .where(eq(posts.id, id))
+      .returning();
+    if (existing.slug !== input.slug) {
+      // Keep old links working, and collapse chains (a → b → c becomes a → c, b → c).
+      await tx.update(redirects).set({ toSlug: input.slug }).where(eq(redirects.toSlug, existing.slug));
+      await tx
+        .insert(redirects)
+        .values({ fromSlug: existing.slug, toSlug: input.slug })
+        .onConflictDoUpdate({ target: redirects.fromSlug, set: { toSlug: input.slug } });
+      await tx.delete(redirects).where(eq(redirects.fromSlug, input.slug));
+    }
+    return toPost(row);
+  });
 }
 
 /** Deletes a post and any redirects pointing at it; returns the old slugs that redirected. */
 export async function deletePost(id: number): Promise<{ post: Post; redirectedFrom: string[] } | null> {
-  const db = getDb();
-  const [row] = await db.delete(posts).where(eq(posts.id, id)).returning();
-  if (!row) return null;
-  const removed = await db
-    .delete(redirects)
-    .where(eq(redirects.toSlug, row.slug))
-    .returning({ fromSlug: redirects.fromSlug });
-  return { post: toPost(row), redirectedFrom: removed.map((r) => r.fromSlug) };
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx.delete(posts).where(eq(posts.id, id)).returning();
+    if (!row) return null;
+    const removed = await tx
+      .delete(redirects)
+      .where(eq(redirects.toSlug, row.slug))
+      .returning({ fromSlug: redirects.fromSlug });
+    return { post: toPost(row), redirectedFrom: removed.map((r) => r.fromSlug) };
+  });
 }
 
 export async function getRedirect(fromSlug: string): Promise<string | null> {
@@ -207,6 +231,94 @@ export async function updateTalk(id: number, input: TalkInput): Promise<Talk | n
 export async function deleteTalk(id: number): Promise<boolean> {
   const rows = await getDb().delete(talks).where(eq(talks.id, id)).returning({ id: talks.id });
   return rows.length > 0;
+}
+
+/* --------------------------------------------------------------- projects */
+
+function toProject(row: typeof projects.$inferSelect): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    tagline: row.tagline,
+    url: row.url,
+    imageUrl: row.imageUrl,
+    kind: row.kind,
+    stage: row.stage,
+    role: row.role,
+    year: row.year,
+    published: row.published,
+    position: row.position,
+  };
+}
+
+const projectOrder = [asc(projects.position), asc(projects.id)];
+
+export async function listPublishedProjects(): Promise<Project[]> {
+  const rows = await getDb()
+    .select()
+    .from(projects)
+    .where(eq(projects.published, true))
+    .orderBy(...projectOrder);
+  return rows.map(toProject);
+}
+
+export async function listAllProjects(): Promise<Project[]> {
+  const rows = await getDb().select().from(projects).orderBy(...projectOrder);
+  return rows.map(toProject);
+}
+
+/** New projects go to the end of the carousel. */
+export async function createProject(input: ProjectInput): Promise<Project> {
+  const db = getDb();
+  const [{ next }] = await db
+    .select({ next: sql<number>`coalesce(max(${projects.position}), -1)::int + 1` })
+    .from(projects);
+  const [row] = await db
+    .insert(projects)
+    .values({ ...input, position: next })
+    .returning();
+  return toProject(row);
+}
+
+export async function updateProject(id: number, input: ProjectInput): Promise<Project | null> {
+  const [row] = await getDb()
+    .update(projects)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(projects.id, id))
+    .returning();
+  return row ? toProject(row) : null;
+}
+
+export async function setProjectPublished(id: number, published: boolean): Promise<Project | null> {
+  const [row] = await getDb()
+    .update(projects)
+    .set({ published, updatedAt: new Date() })
+    .where(eq(projects.id, id))
+    .returning();
+  return row ? toProject(row) : null;
+}
+
+export async function deleteProject(id: number): Promise<boolean> {
+  const rows = await getDb().delete(projects).where(eq(projects.id, id)).returning({ id: projects.id });
+  return rows.length > 0;
+}
+
+/**
+ * Store a new carousel order. `ids` must list every project exactly once; returns false
+ * (and changes nothing) when it does not, e.g. after a project was added in another tab.
+ */
+export async function reorderProjects(ids: number[]): Promise<boolean> {
+  return getDb().transaction(async (tx) => {
+    const existing = await tx.select({ id: projects.id }).from(projects);
+    const known = new Set(existing.map((r) => r.id));
+    if (ids.length !== known.size || new Set(ids).size !== ids.length || !ids.every((id) => known.has(id))) {
+      return false;
+    }
+    for (const [position, id] of ids.entries()) {
+      await tx.update(projects).set({ position }).where(eq(projects.id, id));
+    }
+    return true;
+  });
 }
 
 /* --------------------------------------------------------- about/settings */

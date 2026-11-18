@@ -1,22 +1,23 @@
 import type { GetStaticProps } from 'next';
-import { Intro, ProjectCard } from '@/components/home/Intro';
+import { Intro, Projects } from '@/components/home/Intro';
 import { Layout } from '@/components/layout/Layout';
-import { getSettings } from '@/lib/db/queries';
+import { getSettings, listPublishedProjects, type Project } from '@/lib/db/queries';
 import { SITE_URL, absoluteUrl, type SiteSettings } from '@/lib/site';
 
 type Props = {
   site: SiteSettings;
+  projects: Project[];
 };
 
 export const getStaticProps: GetStaticProps<Props> = async () => {
-  const site = await getSettings();
+  const [site, projects] = await Promise.all([getSettings(), listPublishedProjects()]);
   return {
-    props: { site },
+    props: { site, projects },
     revalidate: 300,
   };
 };
 
-export default function HomePage({ site }: Props) {
+export default function HomePage({ site, projects }: Props) {
   return (
     <Layout
       site={site}
@@ -29,13 +30,18 @@ export default function HomePage({ site }: Props) {
           name: site.title,
           description: site.description,
           url: SITE_URL,
-          author: { '@type': 'Person', name: site.author, url: absoluteUrl('/about') },
+          author: {
+            '@type': 'Person',
+            name: site.author,
+            url: absoluteUrl('/about'),
+            ...(site.avatarUrl ? { image: absoluteUrl(site.avatarUrl) } : {}),
+          },
           sameAs: site.links.filter((l) => l.kind !== 'email').map((l) => l.url),
         },
       }}
     >
       <Intro site={site} />
-      <ProjectCard site={site} />
+      <Projects projects={projects} />
     </Layout>
   );
 }

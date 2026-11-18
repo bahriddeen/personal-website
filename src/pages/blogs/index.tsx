@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { FeaturedPosts } from '@/components/blog/FeaturedPosts';
 import { Layout, Section } from '@/components/layout/Layout';
 import { SupportBlock } from '@/components/ui/Social';
+import { cn } from '@/lib/cn';
 import { getSettings, listPublicPosts, type PostSummary } from '@/lib/db/queries';
 import { formatDate, isoDay } from '@/lib/format';
 import type { SiteSettings } from '@/lib/site';
@@ -22,7 +23,8 @@ const FEATURED_COUNT = 4;
 export default function BlogsPage({ site, posts }: Props) {
   const featured = posts.slice(0, FEATURED_COUNT);
   // With only a handful of posts, the list repeats them so the page is never half empty.
-  const listed = posts.length > FEATURED_COUNT ? posts.slice(FEATURED_COUNT) : posts;
+  const repeatsFeatured = posts.length <= FEATURED_COUNT;
+  const listed = repeatsFeatured ? posts : posts.slice(FEATURED_COUNT);
 
   return (
     <Layout
@@ -43,28 +45,30 @@ export default function BlogsPage({ site, posts }: Props) {
         </Section>
       ) : (
         <>
-          <Section className="max-w-full overflow-x-clip">
-            <h1 className="mb-16 text-xl font-medium dark:text-zinc-300">Recent Posts 🔥</h1>
+          <Section className="max-w-full overflow-x-clip max-sm:mb-14 max-sm:mt-12">
+            <h1 className="mb-8 text-xl font-medium dark:text-zinc-300 sm:mb-16">Recent Posts 🔥</h1>
             <FeaturedPosts posts={featured} />
           </Section>
 
-          <Section className="mt-10">
-            <h2 className="mb-12 text-xl font-medium dark:text-zinc-300">All Posts</h2>
+          {/* On phones the featured list already shows every post when there are only a few,
+              so the repeat would be the same rows twice in a row. */}
+          <Section className={cn('mt-10 max-sm:mb-12', repeatsFeatured && 'max-sm:hidden')}>
+            <h2 className="mb-4 text-xl font-medium dark:text-zinc-300 sm:mb-12">All Posts</h2>
             <ul className="w-full">
               {listed.map((post) => (
                 <li
                   key={post.id}
-                  className="mb-6 w-full border-b border-zinc-200 py-2 dark:border-zinc-700"
+                  className="w-full border-b border-zinc-200 dark:border-zinc-700 sm:mb-6 sm:py-2"
                 >
                   <Link
                     href={`/blogs/${post.slug}`}
-                    className="flex w-full items-baseline justify-between gap-4 rounded transition-colors duration-200 ease-out hover:text-zinc-600 dark:text-zinc-300 dark:hover:text-white"
+                    className="flex w-full flex-col gap-1 rounded py-4 transition-colors duration-200 ease-out hover:text-zinc-600 active:text-zinc-500 dark:text-zinc-300 dark:hover:text-white sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 sm:py-0"
                   >
-                    <span className="text-balance font-medium">{post.title}</span>
+                    <span className="text-pretty font-medium sm:text-balance">{post.title}</span>
                     {post.publishedAt && (
                       <time
                         dateTime={isoDay(post.publishedAt)}
-                        className="shrink-0 text-sm text-zinc-600 dark:text-inherit"
+                        className="order-first shrink-0 text-sm text-zinc-500 dark:text-zinc-400 sm:order-none sm:text-zinc-600 sm:dark:text-inherit"
                       >
                         {formatDate(post.publishedAt)}
                       </time>

@@ -326,6 +326,38 @@ html.dark {
   .code-copy {
     opacity: 1;
   }
+  /* The copy button is always shown on touch, so keep the first line of code clear of it. */
+  .prose .code-block pre {
+    padding-top: 2.5rem;
+  }
+}
+/* Phones: code runs edge to edge (main has a 1.5rem gutter) to win back width for long lines,
+   and wide tables scroll inside themselves instead of squeezing every column. */
+@media (max-width: 639px) {
+  .prose .code-block {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    border-radius: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+  }
+  .prose .code-block pre {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .prose .code-copy {
+    right: 1rem;
+  }
+  .prose .code-lang {
+    left: 1.5rem;
+  }
+  .prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
 }
 .code-lang {
   position: absolute;

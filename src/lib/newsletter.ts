@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
 import { newsletterIssues, posts, subscribers } from '@/lib/db/schema';
 import { emailConfigured, escapeHtml, sendEmails, type EmailMessage } from '@/lib/email';
@@ -33,10 +33,17 @@ export function oneClickUnsubscribeUrl(token: string): string {
   return absoluteUrl(`/api/newsletter/unsubscribe?token=${encodeURIComponent(token)}`);
 }
 
-function layout(siteTitle: string, inner: string, footer: string): string {
+/**
+ * The shared email frame: site name, white card, small footer. `preheader` is the line most
+ * mail apps show after the subject in the inbox; it is hidden in the email itself.
+ */
+export function emailLayout(siteTitle: string, inner: string, footer: string, preheader = ''): string {
+  const hidden = preheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">${escapeHtml(preheader)}</div>\n`
+    : '';
   return `<!doctype html>
 <html><body style="margin:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#27272a">
-<div style="max-width:560px;margin:0 auto;padding:32px 20px">
+${hidden}<div style="max-width:560px;margin:0 auto;padding:32px 20px">
 <p style="margin:0 0 20px;font-size:15px;font-weight:600;color:#52525b">${escapeHtml(siteTitle)}</p>
 <div style="background:#ffffff;border-radius:20px;padding:28px">${inner}</div>
 <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#71717a">${footer}</p>
@@ -51,7 +58,7 @@ export function confirmEmail(siteTitle: string, to: string, token: string): Emai
   return {
     to,
     subject: `Confirm your subscription to ${siteTitle}`,
-    html: layout(
+    html: emailLayout(
       siteTitle,
       `<h1 style="margin:0 0 12px;font-size:22px">One more step</h1>
 <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#52525b">Confirm your email and new posts will arrive in your inbox. No spam, unsubscribe any time.</p>
@@ -74,7 +81,7 @@ export function postEmail(siteTitle: string, to: string, token: string, post: Is
       'List-Unsubscribe': `<${oneClickUnsubscribeUrl(token)}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
-    html: layout(
+    html: emailLayout(
       siteTitle,
       `<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em">New post</p>
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3">${escapeHtml(post.title)}</h1>
@@ -83,6 +90,36 @@ ${button(url, 'Read the post')}`,
       `You're getting this because you subscribed at ${escapeHtml(SITE_URL)}. <a href="${escapeHtml(unsubscribe)}" style="color:#71717a">Unsubscribe</a>.`,
     ),
     text: `${post.title}\n\n${post.description ? `${post.description}\n\n` : ''}Read it: ${url}\n\n--\nUnsubscribe: ${unsubscribe}`,
+  };
+}
+
+export type CampaignContent = {
+  subject: string;
+  preheader: string;
+  /** Body already rendered for email (see renderEmailMarkdown). */
+  html: string;
+  /** The Markdown source, used as the plain-text part. */
+  bodyMd: string;
+};
+
+/** A newsletter email written on its own (not a blog post), for one subscriber. */
+export function campaignEmail(siteTitle: string, to: string, token: string, c: CampaignContent): EmailMessage {
+  const unsubscribe = unsubscribePageUrl(token);
+  return {
+    to,
+    subject: c.subject,
+    headers: {
+      'List-Unsubscribe': `<${oneClickUnsubscribeUrl(token)}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+    html: emailLayout(
+      siteTitle,
+      c.html,
+      `You're getting this because you subscribed at ${escapeHtml(SITE_URL)}. <a href="${escapeHtml(unsubscribe)}" style="color:#71717a">Unsubscribe</a>.`,
+      c.preheader,
+    ),
+    // Markdown reads fine as plain text; site links just need the full address.
+    text: `${c.bodyMd.trim().replace(/\]\((\/(?!\/)[^)\s]*)\)/g, (_, path: string) => `](${absoluteUrl(path)})`)}\n\n--\nUnsubscribe: ${unsubscribe}`,
   };
 }
 
@@ -207,18 +244,108 @@ export async function subscriberCounts(): Promise<SubscriberCounts> {
 }
 
 export type SubscriberRow = {
+  id: number;
   email: string;
   status: SubscriberStatus;
   createdAt: string;
 };
 
-export async function recentSubscribers(limit = 50): Promise<SubscriberRow[]> {
-  const rows = await getDb()
-    .select({ email: subscribers.email, status: subscribers.status, createdAt: subscribers.createdAt })
+export const SUBSCRIBER_PAGE_SIZE = 50;
+/** Search text is cut to this length; no email address is longer. */
+const MAX_SEARCH = 254;
+
+export type SubscriberQuery = {
+  /** Part of an email address, matched anywhere and ignoring case. Empty matches all. */
+  search: string;
+  status: SubscriberStatus | 'all';
+  /** 1-based. */
+  page: number;
+};
+
+const STATUSES: readonly SubscriberStatus[] = ['pending', 'active', 'unsubscribed'];
+
+/** Read a list query from URL parameters, falling back to safe defaults for anything odd. */
+export function parseSubscriberQuery(params: Record<string, string | string[] | undefined>): SubscriberQuery {
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
+  const status = one(params.status);
+  const page = Number(one(params.page));
+  return {
+    search: one(params.q).trim().slice(0, MAX_SEARCH),
+    status: (STATUSES as readonly string[]).includes(status) ? (status as SubscriberStatus) : 'all',
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+  };
+}
+
+/** ILIKE pattern for "contains", with the wildcard characters in the search escaped. */
+export function containsPattern(search: string): string {
+  return `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+function subscriberFilter(q: Pick<SubscriberQuery, 'search' | 'status'>) {
+  return and(
+    q.status === 'all' ? undefined : eq(subscribers.status, q.status),
+    q.search ? ilike(subscribers.email, containsPattern(q.search)) : undefined,
+  );
+}
+
+export type SubscriberPage = SubscriberQuery & {
+  rows: SubscriberRow[];
+  /** How many subscribers match, across all pages. */
+  total: number;
+  pageSize: number;
+};
+
+/** One page of subscribers, newest first. A page past the end comes back as the last page. */
+export async function listSubscribers(query: SubscriberQuery): Promise<SubscriberPage> {
+  const db = getDb();
+  const where = subscriberFilter(query);
+  const [{ n }] = await db.select({ n: count() }).from(subscribers).where(where);
+  const total = Number(n);
+  const lastPage = Math.max(1, Math.ceil(total / SUBSCRIBER_PAGE_SIZE));
+  const page = Math.min(query.page, lastPage);
+  const rows = await db
+    .select({ id: subscribers.id, email: subscribers.email, status: subscribers.status, createdAt: subscribers.createdAt })
     .from(subscribers)
-    .orderBy(desc(subscribers.createdAt))
-    .limit(limit);
-  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+    .where(where)
+    .orderBy(desc(subscribers.createdAt), desc(subscribers.id))
+    .limit(SUBSCRIBER_PAGE_SIZE)
+    .offset((page - 1) * SUBSCRIBER_PAGE_SIZE);
+  return {
+    ...query,
+    page,
+    total,
+    pageSize: SUBSCRIBER_PAGE_SIZE,
+    rows: rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })),
+  };
+}
+
+/** Every subscriber matching the filter, newest first, for the CSV export. */
+export async function exportSubscribers(
+  query: Pick<SubscriberQuery, 'search' | 'status'>,
+): Promise<Array<SubscriberRow & { confirmedAt: string | null; unsubscribedAt: string | null }>> {
+  const rows = await getDb()
+    .select()
+    .from(subscribers)
+    .where(subscriberFilter(query))
+    .orderBy(desc(subscribers.createdAt), desc(subscribers.id));
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    status: r.status,
+    createdAt: r.createdAt.toISOString(),
+    confirmedAt: r.confirmedAt?.toISOString() ?? null,
+    unsubscribedAt: r.unsubscribedAt?.toISOString() ?? null,
+  }));
+}
+
+/**
+ * One CSV field. Quoted when needed, and a leading = + - @ (or tab/CR) is neutralised so a
+ * spreadsheet never runs a cell as a formula.
+ */
+export function csvField(value: string | number | null): string {
+  let v = value === null ? '' : String(value);
+  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 export type IssueRow = {

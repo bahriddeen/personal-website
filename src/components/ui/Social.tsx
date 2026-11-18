@@ -3,6 +3,7 @@ import {
   EnvelopeSimple,
   GithubLogo,
   Globe,
+  InstagramLogo,
   LinkedinLogo,
   TelegramLogo,
   XLogo,
@@ -25,6 +26,7 @@ export const SOCIAL_ICONS: Record<SocialKind, Icon> = {
   github: GithubLogo,
   linkedin: LinkedinLogo,
   telegram: TelegramLogo,
+  instagram: InstagramLogo,
   x: XLogo,
   youtube: YoutubeLogo,
   coffee: Coffee,
@@ -56,6 +58,8 @@ const TILE_STYLES: Record<SocialKind, string> = {
     'border-blue-200 bg-blue-50 text-[#1686B0] hover:bg-blue-100 hover:shadow-[0_0_15px_rgba(22,134,176,0.5)]',
   github:
     'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]',
+  instagram:
+    'border-pink-200 bg-pink-50 text-[#D62976] hover:bg-pink-100 hover:shadow-[0_0_15px_rgba(214,41,118,0.45)]',
   x: 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-[0_0_15px_rgba(0,0,0,0.3)]',
   youtube:
     'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-[0_0_15px_rgba(255,0,0,0.5)]',

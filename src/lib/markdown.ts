@@ -37,6 +37,13 @@ import 'prismjs/components/prism-kotlin';
 import 'prismjs/components/prism-dart';
 import 'prismjs/components/prism-diff';
 import 'prismjs/components/prism-docker';
+import 'prismjs/components/prism-scss';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-markup-templating';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-graphql';
+import 'prismjs/components/prism-toml';
 
 const LANGUAGE_ALIASES: Record<string, string> = {
   ts: 'typescript',
@@ -55,6 +62,10 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   kt: 'kotlin',
   dockerfile: 'docker',
   'c++': 'cpp',
+  cs: 'csharp',
+  'c#': 'csharp',
+  rb: 'ruby',
+  gql: 'graphql',
 };
 
 /** Hosts the Next.js image optimiser is allowed to fetch from (see next.config.ts). */

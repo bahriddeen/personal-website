@@ -5,6 +5,7 @@ import {
   getPublicPost,
   getSettings,
   listPublicPosts,
+  listPublishedProjects,
   listTalks,
 } from '@/lib/db/queries';
 import { mdAbout, mdBlogs, mdIndex, mdPost, mdSitemap, mdTalks } from '@/lib/feeds';
@@ -26,8 +27,12 @@ async function build(parts: string[]): Promise<{ body: string; canonical: string
 
   switch (key) {
     case 'index': {
-      const [site, posts] = await Promise.all([getSettings(), listPublicPosts()]);
-      return { body: mdIndex(site, posts, today), canonical: '/' };
+      const [site, posts, projects] = await Promise.all([
+        getSettings(),
+        listPublicPosts(),
+        listPublishedProjects(),
+      ]);
+      return { body: mdIndex(site, posts, today, projects), canonical: '/' };
     }
     case 'about': {
       const [site, page] = await Promise.all([getSettings(), getPage('about')]);

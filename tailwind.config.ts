@@ -55,6 +55,10 @@ const config: Config = {
           from: { opacity: '0', filter: 'blur(8px)', transform: 'translateY(6px)' },
           to: { opacity: '1', filter: 'blur(0)', transform: 'translateY(0)' },
         },
+        captionIn: {
+          from: { opacity: '0', transform: 'translateY(4px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         fadeSm: 'fade .4s forwards',
@@ -66,6 +70,7 @@ const config: Config = {
         modalReveal: 'modalReveal .6s cubic-bezier(0,1,0,1.1) forwards',
         marquee: 'marquee var(--marquee-duration, 30s) linear infinite',
         blurReveal: 'blurReveal .7s cubic-bezier(.2,.6,.2,1) forwards',
+        captionIn: 'captionIn .28s cubic-bezier(.22,1,.36,1) both',
       },
     },
   },

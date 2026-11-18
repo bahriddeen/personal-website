@@ -1,36 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { settingsSchema } from '@/lib/admin/validation';
 import { confirmEmail, normalizeEmail, postEmail } from '@/lib/newsletter';
-import { bookingEmbedUrl, defaultSettings, isBookingUrl } from '@/lib/site';
-
-describe('booking link', () => {
-  const schedule = 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1abc';
-
-  it('accepts Google booking pages only', () => {
-    expect(isBookingUrl(schedule)).toBe(true);
-    expect(isBookingUrl('https://calendar.app.google/xyz')).toBe(true);
-    expect(isBookingUrl('http://calendar.google.com/calendar/appointments/schedules/x')).toBe(false);
-    expect(isBookingUrl('https://evil.example/calendar.google.com')).toBe(false);
-    expect(isBookingUrl('javascript:alert(1)')).toBe(false);
-  });
-
-  it('embeds schedule links with gv=true and refuses short links', () => {
-    expect(bookingEmbedUrl(schedule)).toBe(`${schedule}?gv=true`);
-    // The form a calendar.app.google short link redirects to.
-    expect(bookingEmbedUrl('https://calendar.google.com/appointments/schedules/AcZssZ1abc')).toBe(
-      `${schedule}?gv=true`,
-    );
-    expect(bookingEmbedUrl(`${schedule}?gv=true&foo=1`)).toBe(`${schedule}?gv=true`);
-    expect(bookingEmbedUrl('https://calendar.app.google/xyz')).toBeNull();
-    expect(bookingEmbedUrl('https://calendar.google.com/calendar/u/0/r')).toBeNull();
-  });
-
-  it('validates in settings, allowing empty', () => {
-    expect(settingsSchema.safeParse({ ...defaultSettings, bookingUrl: '' }).success).toBe(true);
-    expect(settingsSchema.safeParse({ ...defaultSettings, bookingUrl: schedule }).success).toBe(true);
-    expect(settingsSchema.safeParse({ ...defaultSettings, bookingUrl: 'https://cal.com/me' }).success).toBe(false);
-  });
-});
 
 describe('newsletter emails', () => {
   it('normalises addresses', () => {

@@ -11,6 +11,21 @@ export const devLoginEnabled =
 
 export const githubLoginEnabled = Boolean(process.env.GITHUB_ID && process.env.GITHUB_SECRET);
 
+/** The user id the dev login signs in as (GitHub ids are numeric, so the two never collide). */
+const DEV_ADMIN_ID = 'dev-admin';
+
+/**
+ * Whether a session token still belongs to the admin. Checked on every request rather than
+ * only at sign-in, so a dev-login token stops working outside local development, and a
+ * GitHub account stops working as soon as ADMIN_GITHUB_ID no longer names it.
+ */
+export function tokenIsAdmin(token: { admin?: boolean; sub?: string }): boolean {
+  if (token.admin !== true || !token.sub) return false;
+  if (token.sub === DEV_ADMIN_ID) return devLoginEnabled;
+  const allowed = process.env.ADMIN_GITHUB_ID;
+  return Boolean(allowed) && token.sub === allowed;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     ...(githubLoginEnabled
@@ -27,7 +42,7 @@ export const authOptions: NextAuthOptions = {
             id: 'dev',
             name: 'Dev login',
             credentials: {},
-            authorize: async () => ({ id: 'dev-admin', name: 'Dev admin' }),
+            authorize: async () => ({ id: DEV_ADMIN_ID, name: 'Dev admin' }),
           }),
         ]
       : []),
@@ -51,7 +66,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      session.admin = token.admin === true;
+      session.admin = tokenIsAdmin(token);
       return session;
     },
   },

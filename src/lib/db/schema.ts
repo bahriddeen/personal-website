@@ -1,10 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { date, integer, jsonb, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, date, integer, jsonb, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import type { SiteSettings } from '@/lib/site';
 
 export const POST_STATUSES = ['draft', 'published'] as const;
 export const TALK_TYPES = ['talk', 'podcast', 'video'] as const;
 export const SUBSCRIBER_STATUSES = ['pending', 'active', 'unsubscribed'] as const;
+export const PROJECT_KINDS = ['startup', 'product', 'open-source', 'side-project'] as const;
+export const PROJECT_STAGES = ['idea', 'building', 'beta', 'live', 'paused', 'acquired', 'closed'] as const;
 
 export const posts = pgTable('posts', {
   id: serial('id').primaryKey(),
@@ -35,6 +37,28 @@ export const talks = pgTable('talks', {
   duration: text('duration').notNull().default(''),
   description: text('description').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+});
+
+/**
+ * Products and startups for the coverflow carousel on the home page. Only published rows are
+ * public; `position` sets the carousel order (lowest first).
+ */
+export const projects = pgTable('projects', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  tagline: text('tagline').notNull().default(''),
+  url: text('url').notNull().default(''),
+  imageUrl: text('image_url'),
+  kind: text('kind', { enum: PROJECT_KINDS }).notNull().default('product'),
+  stage: text('stage', { enum: PROJECT_STAGES }).notNull().default('building'),
+  /** Free text such as "Founder" or "Solo developer". */
+  role: text('role').notNull().default(''),
+  /** Free text such as "2025" or "2021–2023". */
+  year: text('year').notNull().default(''),
+  published: boolean('published').notNull().default(false),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 });
 
 /** Free-form Markdown pages. Only "about" exists today. */
@@ -81,4 +105,44 @@ export const newsletterIssues = pgTable('newsletter_issues', {
     .references(() => posts.id, { onDelete: 'cascade' }),
   sentAt: timestamp('sent_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   recipients: integer('recipients').notNull().default(0),
+});
+
+export const CAMPAIGN_STATUSES = ['draft', 'sending', 'sent'] as const;
+
+/**
+ * Newsletter emails written on their own (announcements, updates, offers), as opposed to a blog
+ * post sent to subscribers. They are never shown on the site. "sending" claims a campaign while
+ * it goes out, so it cannot be sent twice.
+ */
+export const campaigns = pgTable('campaigns', {
+  id: serial('id').primaryKey(),
+  subject: text('subject').notNull(),
+  /** Inbox preview line shown after the subject in most mail apps. Optional. */
+  preheader: text('preheader').notNull().default(''),
+  bodyMd: text('body_md').notNull().default(''),
+  status: text('status', { enum: CAMPAIGN_STATUSES }).notNull().default('draft'),
+  recipients: integer('recipients').notNull().default(0),
+  sentAt: timestamp('sent_at', { withTimezone: true, mode: 'date' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+});
+
+export const BOOKING_STATUSES = ['new', 'accepted', 'declined'] as const;
+
+/**
+ * Requests for a 1:1 call from the /book form. Nothing is booked until the owner accepts one
+ * in Admin → Booking; an accepted request takes its slot off the form.
+ */
+export const bookingRequests = pgTable('booking_requests', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  /** Stored lowercased. */
+  email: text('email').notNull(),
+  startsAt: timestamp('starts_at', { withTimezone: true, mode: 'date' }).notNull(),
+  durationMinutes: integer('duration_minutes').notNull(),
+  /** The visitor's IANA zone, so the owner can reply in their local time. */
+  visitorTimeZone: text('visitor_time_zone').notNull().default(''),
+  message: text('message').notNull(),
+  status: text('status', { enum: BOOKING_STATUSES }).notNull().default('new'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 });

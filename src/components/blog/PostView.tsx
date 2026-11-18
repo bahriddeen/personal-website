@@ -43,8 +43,9 @@ function ReadingProgress() {
   );
 }
 
+// 40px on touch-sized screens, the reference's 32px from sm up.
 const shareButton =
-  'flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700';
+  'flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700';
 
 function ShareButtons({ title, url }: { title: string; url: string }) {
   const [copied, setCopied] = useState(false);
@@ -135,7 +136,9 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
       {post.coverUrl && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-0 h-[800px] w-full select-none opacity-10 after:absolute after:bottom-0 after:left-0 after:h-40 after:w-full after:bg-gradient-to-t after:from-white after:to-white/0 dark:opacity-[5%] dark:after:from-zinc-900 dark:after:to-zinc-900/0"
+          // Phones crop the cover hard and the shapes land behind the title, so there it is
+          // shorter and blurred into a wash of its colours.
+          className="pointer-events-none absolute left-0 top-0 h-[800px] w-full max-sm:h-[560px] max-sm:blur-2xl select-none opacity-10 after:absolute after:bottom-0 after:left-0 after:h-40 after:w-full after:bg-gradient-to-t after:from-white after:to-white/0 dark:opacity-[5%] dark:after:from-zinc-900 dark:after:to-zinc-900/0"
         >
           <FillImage
             src={post.coverUrl}
@@ -147,25 +150,27 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
         </div>
       )}
 
-      <Section className="relative">
+      <Section className="relative max-sm:mt-8">
         <div className="w-full">
-          <header className="mb-10">
+          <header className="mb-8 sm:mb-10">
             <div className="fade mb-4 animate-fadeSm">
+              {/* Phones have no hover to reveal the arrow, so it shows from the start there,
+                  with a taller hit area. */}
               <Link
                 href="/blogs"
-                className="group flex w-max -translate-x-5 items-center gap-1.5 rounded font-medium text-zinc-600 duration-300 ease-bounce dark:text-zinc-300 sm:hover:translate-x-0"
+                className="group -my-2.5 flex w-max items-center gap-1.5 rounded py-2.5 font-medium text-zinc-600 duration-300 ease-bounce active:text-zinc-900 dark:text-zinc-300 dark:active:text-white sm:-translate-x-5 sm:hover:translate-x-0"
               >
                 <ArrowLeft
                   size={14}
                   weight="bold"
                   aria-hidden="true"
-                  className="-translate-x-4 opacity-0 duration-300 ease-bounce sm:group-hover:translate-x-0 sm:group-hover:opacity-100"
+                  className="duration-300 ease-bounce sm:-translate-x-4 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100"
                 />
                 Back to blog
               </Link>
             </div>
 
-            <h1 className="fade mb-4 mt-[54px] animate-fade text-balance text-4xl font-bold leading-10 text-zinc-900 dark:text-zinc-100">
+            <h1 className="fade mb-4 mt-8 animate-fade text-balance text-[2rem] font-bold leading-[1.15] tracking-tight text-zinc-900 dark:text-zinc-100 sm:mt-[54px] sm:text-4xl sm:leading-10 sm:tracking-normal">
               {post.title}
             </h1>
 
@@ -182,7 +187,7 @@ export function PostView({ post, html, site, draft = false }: PostViewProps) {
               </ul>
             )}
 
-            <div className="fade flex animate-fadeMd flex-wrap items-center justify-between gap-4">
+            <div className="fade flex animate-fadeMd flex-wrap items-center justify-between gap-x-4 gap-y-3">
               <p className="text-sm text-zinc-600 dark:text-zinc-300">
                 {draft ? (
                   'Draft · Not published'

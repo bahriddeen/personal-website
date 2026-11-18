@@ -7,8 +7,10 @@ import { cn } from '@/lib/cn';
 
 const NAV = [
   { href: '/admin', label: 'Posts', match: (p: string) => p === '/admin' || p.startsWith('/admin/posts') },
+  { href: '/admin/projects', label: 'Projects', match: (p: string) => p.startsWith('/admin/projects') },
   { href: '/admin/talks', label: 'Talks', match: (p: string) => p.startsWith('/admin/talks') },
   { href: '/admin/newsletter', label: 'Newsletter', match: (p: string) => p.startsWith('/admin/newsletter') },
+  { href: '/admin/booking', label: 'Booking', match: (p: string) => p.startsWith('/admin/booking') },
   { href: '/admin/about', label: 'About', match: (p: string) => p.startsWith('/admin/about') },
   { href: '/admin/settings', label: 'Settings', match: (p: string) => p.startsWith('/admin/settings') },
 ];

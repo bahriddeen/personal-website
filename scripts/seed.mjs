@@ -1,4 +1,4 @@
-// Insert placeholder content so every page renders: 3 posts, 2 talks, the About page
+// Insert placeholder content so every page renders: 3 posts, 2 talks, 4 projects, the About page
 // and an empty settings row (defaults from src/lib/site.ts apply until you save Settings).
 // Existing rows are never overwritten, so it is safe to run more than once.
 import { readFileSync, readdirSync } from 'node:fs';
@@ -78,13 +78,38 @@ try {
     }
   }
 
+  // Placeholder projects next to the real one the migration carried over, so the home page
+  // carousel has something to turn. Unsplash photos stand in for product shots.
+  const unsplash = (id) => `https://images.unsplash.com/photo-${id}?w=640&h=640&fit=crop&q=70&auto=format`;
+  const projects = [
+    ['PLACEHOLDER startup — replace me in Admin → Projects', 'startup', 'live', '1470071459604-3b5ec3a7fe05'],
+    ['PLACEHOLDER product', 'product', 'beta', '1500534314209-a25ddb2bd429'],
+    ['PLACEHOLDER open-source tool', 'open-source', 'live', '1441974231531-c6227db76b6e'],
+    ['PLACEHOLDER side project', 'side-project', 'paused', '1519681393784-d120267933ba'],
+  ];
+  let insertedProjects = 0;
+  const { rows: projectRows } = await pool.query("SELECT count(*)::int AS n FROM projects WHERE name LIKE 'PLACEHOLDER%'");
+  if (projectRows[0].n === 0) {
+    for (const [name, kind, stage, photo] of projects) {
+      await pool.query(
+        `INSERT INTO projects (name, tagline, image_url, kind, stage, role, year, published, position)
+         VALUES ($1, 'Placeholder entry — one sentence about what it does.', $2, $3, $4, 'Founder', '2025', true,
+                 (SELECT coalesce(max(position), -1) + 1 FROM projects))`,
+        [name, unsplash(photo), kind, stage],
+      );
+      insertedProjects += 1;
+    }
+  }
+
   await pool.query(
     `INSERT INTO pages (slug, content_md) VALUES ('about', $1) ON CONFLICT (slug) DO NOTHING`,
     [readFileSync(path.join('seed', 'about.md'), 'utf8')],
   );
   await pool.query(`INSERT INTO settings (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING`);
 
-  console.log(`Seeded: ${insertedPosts} post(s), ${insertedTalks} talk(s), about page, settings.`);
+  console.log(
+    `Seeded: ${insertedPosts} post(s), ${insertedTalks} talk(s), ${insertedProjects} project(s), about page, settings.`,
+  );
 } catch (err) {
   console.error('Seeding failed:', err.message);
   process.exitCode = 1;

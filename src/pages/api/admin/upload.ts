@@ -24,6 +24,17 @@ async function readBody(req: NextApiRequest, limit: number): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+/** The original file name, sent URI-encoded; a malformed header just falls back to "image". */
+function fileName(header: string | string[] | undefined): string {
+  const raw = Array.isArray(header) ? header[0] : header;
+  if (!raw) return 'image';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return 'image';
+  }
+}
+
 export default withAdmin({
   POST: async (req, res) => {
     let body: Buffer;
@@ -44,7 +55,7 @@ export default withAdmin({
 
     // File name: readable stem + random suffix + pixel size. The size lets pages reserve
     // the right space for the image before it loads (see src/lib/markdown.ts).
-    const original = decodeURIComponent(String(req.headers['x-filename'] ?? 'image'));
+    const original = fileName(req.headers['x-filename']);
     const stem = slugify(original.replace(/\.[^.]+$/, '')) || 'image';
     const dims = imageSize(body, type);
     const suffix = randomBytes(4).toString('hex');

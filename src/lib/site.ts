@@ -1,7 +1,9 @@
 /** Site-wide settings. Stored as one JSON row in the database and editable in Admin → Settings. */
 
+import { defaultBooking, withBookingDefaults, type BookingSettings } from '@/lib/booking';
+
 export type SocialKind =
-  'github' | 'linkedin' | 'telegram' | 'x' | 'youtube' | 'coffee' | 'email' | 'website';
+  'github' | 'linkedin' | 'telegram' | 'instagram' | 'x' | 'youtube' | 'coffee' | 'email' | 'website';
 
 export type SocialLink = {
   kind: SocialKind;
@@ -12,6 +14,10 @@ export type SocialLink = {
 export type SiteSettings = {
   /** Shown in the header and used as the site name in meta tags. */
   title: string;
+  /** Short line under the name in the header card, e.g. "Builder & engineer". */
+  headline: string;
+  /** Round photo in the header card (absolute URL or a path under /public), or empty for initials. */
+  avatarUrl: string;
   /** Full name used for author metadata. */
   author: string;
   /** One-line bio shown on the home page. */
@@ -23,19 +29,16 @@ export type SiteSettings = {
   /** X/Twitter handle without the @, or empty. */
   twitterHandle: string;
   links: SocialLink[];
-  /** The project card on the home and about pages. */
-  project: {
-    name: string;
-    tagline: string;
+  /** The "Let's chat" button at the right of the navbar. An empty `url` hides it. */
+  chat: {
+    label: string;
+    /** Telegram profile link, e.g. https://t.me/username. */
     url: string;
   };
   /** Words for the scrolling strip on the home page. */
   marquee: string[];
-  /**
-   * Google Calendar appointment schedule shown on /book. Empty hides the booking widget.
-   * The embeddable form is https://calendar.google.com/calendar/appointments/schedules/…
-   */
-  bookingUrl: string;
+  /** The /book request form. Edited in Admin → Booking. */
+  booking: BookingSettings;
 };
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(
@@ -46,6 +49,8 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3
 export const defaultSettings: SiteSettings = {
   title: 'Bahriddin',
   author: 'Bahriddin',
+  headline: 'Software engineer · Building Sakina',
+  avatarUrl: '',
   bio: 'SWE | Building Sakina, an app for Muslims',
   description:
     'Personal website of Bahriddin, a software engineer building Sakina, an app for Muslims. Writing and talks about software engineering.',
@@ -57,92 +62,23 @@ export const defaultSettings: SiteSettings = {
     { kind: 'telegram', label: 'Telegram', url: 'https://t.me/md_bahriddin' },
     { kind: 'coffee', label: 'Buy Me a Coffee', url: 'https://www.buymeacoffee.com/mbahriddin' },
   ],
-  project: {
-    name: 'Sakina',
-    tagline: 'PLACEHOLDER — one sentence about Sakina, an app for Muslims.',
-    url: '',
-  },
+  chat: { label: "Let's chat", url: 'https://t.me/md_bahriddin' },
   marquee: ['PLACEHOLDER', 'TypeScript', 'React', 'Next.js', 'Node.js', 'PostgreSQL', 'Swift'],
-  bookingUrl: '',
+  booking: defaultBooking,
 };
 
 /** Fill in anything missing from stored settings so pages never see undefined fields. */
 export function withDefaults(stored: Partial<SiteSettings> | null | undefined): SiteSettings {
-  const s = stored ?? {};
+  // `project` is a leftover from before projects had their own table (Admin → Projects).
+  const { project: _legacyProject, ...s } = (stored ?? {}) as Partial<SiteSettings> & { project?: unknown };
   return {
     ...defaultSettings,
     ...s,
     links: Array.isArray(s.links) ? s.links : defaultSettings.links,
-    project: { ...defaultSettings.project, ...(s.project ?? {}) },
+    chat: { ...defaultSettings.chat, ...(s.chat ?? {}) },
     marquee: Array.isArray(s.marquee) ? s.marquee : defaultSettings.marquee,
+    booking: withBookingDefaults(s.booking),
   };
-}
-
-/** Google booking pages this site will link to or embed. */
-const BOOKING_HOSTS = ['calendar.google.com', 'calendar.app.google'];
-
-export function isBookingUrl(value: string): boolean {
-  try {
-    const u = new URL(value);
-    return u.protocol === 'https:' && BOOKING_HOSTS.includes(u.hostname);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * The iframe source for a booking URL, or null when it cannot be embedded. Google serves the
- * schedule at /calendar/appointments/schedules/<id> (and redirects /appointments/… there);
- * with ?gv=true it allows framing. A calendar.app.google short link has to be resolved
- * first (see resolveBookingUrl).
- */
-export function bookingEmbedUrl(value: string): string | null {
-  if (!isBookingUrl(value)) return null;
-  const u = new URL(value);
-  const match = u.pathname.match(/^(?:\/calendar)?\/appointments\/schedules\/([\w-]+)\/?$/);
-  if (u.hostname !== 'calendar.google.com' || !match) return null;
-  return `https://calendar.google.com/calendar/appointments/schedules/${match[1]}?gv=true`;
-}
-
-/**
- * Follows a calendar.app.google short link to the schedule it points at. Runs at build /
- * revalidate time only. Returns the input unchanged if it is not a short link or the lookup
- * fails, so the page falls back to a plain button.
- */
-export async function resolveBookingUrl(value: string): Promise<string> {
-  if (!isBookingUrl(value) || new URL(value).hostname !== 'calendar.app.google') return value;
-  try {
-    const res = await fetch(value, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
-    const location = res.headers.get('location');
-    if (location && isBookingUrl(location)) return location;
-  } catch (err) {
-    console.warn('[book] could not resolve booking short link', (err as Error).message);
-  }
-  return value;
-}
-
-/**
- * Hosts the embedded Google booking page pulls from (document, JS/CSS, fonts, data API).
- * Opening these connections early saves a DNS + TLS round trip each before the iframe needs them.
- */
-export const BOOKING_PRECONNECT = [
-  { href: 'https://calendar.google.com' },
-  { href: 'https://www.gstatic.com' },
-  { href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' as const },
-  { href: 'https://calendar-pa.clients6.google.com' },
-];
-
-/** Starts the booking-page connections on intent (hovering or focusing the link to /book). */
-export function warmBookingConnections(): void {
-  if (typeof document === 'undefined' || document.querySelector('link[data-booking-warm]')) return;
-  for (const { href, crossOrigin } of BOOKING_PRECONNECT) {
-    const link = document.createElement('link');
-    link.rel = 'preconnect';
-    link.href = href;
-    if (crossOrigin) link.crossOrigin = crossOrigin;
-    link.dataset.bookingWarm = '';
-    document.head.appendChild(link);
-  }
 }
 
 export function absoluteUrl(path: string): string {

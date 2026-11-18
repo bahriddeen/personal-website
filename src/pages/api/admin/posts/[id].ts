@@ -1,5 +1,5 @@
 import { toPostInput } from '@/lib/admin/posts';
-import { parseBody, revalidate, routeId, withAdmin } from '@/lib/admin/server';
+import { isUniqueViolation, parseBody, revalidate, routeId, withAdmin } from '@/lib/admin/server';
 import { postSchema } from '@/lib/admin/validation';
 import { deletePost, getPostById, isSlugTaken, updatePost } from '@/lib/db/queries';
 
@@ -12,11 +12,17 @@ export default withAdmin({
 
     const before = await getPostById(id);
     if (!before) return res.status(404).json({ error: 'This post no longer exists.' });
-    if (await isSlugTaken(data.slug, id)) {
-      return res.status(409).json({ error: `The slug "${data.slug}" is already used by another post.` });
-    }
+    const taken = { error: `The slug "${data.slug}" is already used by another post.` };
+    if (await isSlugTaken(data.slug, id)) return res.status(409).json(taken);
 
-    const post = await updatePost(id, toPostInput(data));
+    let post;
+    try {
+      post = await updatePost(id, toPostInput(data));
+    } catch (err) {
+      // Another save took the slug between the check above and the update.
+      if (isUniqueViolation(err)) return res.status(409).json(taken);
+      throw err;
+    }
     if (!post) return res.status(404).json({ error: 'This post no longer exists.' });
     // The old URL is regenerated too, so it turns into a redirect (or a 404 for a draft).
     await revalidate(res, ['/', '/blogs', `/blogs/${post.slug}`, `/blogs/${before.slug}`]);

@@ -15,6 +15,27 @@
       "when": 1794817572709,
       "tag": "0001_newsletter",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794821736557,
+      "tag": "0002_booking_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794825254208,
+      "tag": "0003_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794978991799,
+      "tag": "0004_campaigns",
+      "breakpoints": true
     }
   ]
 }
